@@ -7,4 +7,5 @@ there will be a feature being advanced script injection where you can use autoco
 
 # Why should I choose FeX?
 FeX(Face Executing Xvariable) has a ton of modifiable stuff, you have advanced visual mode where you can change the color modes for the weapons, tees, hooks, cursors.
-FeX also has an advanced 1v1 feature where you use the chat command !1v1 <<font color="blue">sPlayername</font>> to 1v1 someone
+FeX also has an advanced 1v1 feature where you use the chat command !1v1 <<font color="blue">sPlayername</font>> to 1v1 someone.
+It also has the same warlist system from Tater but with an advanced war joining system similar but better than cactus client.
