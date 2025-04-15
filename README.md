@@ -1,5 +1,7 @@
 # FeX---DDNetClient
 
+# FEX DISCONTINUED
+
 # What is FeX?
 FeX(Face Executing Xvariable) is an project made by faffa81 for simple features from taterclient, aidobclient, cactusclient. 
 The term Face Executing means: Face -> Local Client(Local client ID), Executing ->  in the first release of the full version FeX.2(planned to release on december 2026)
