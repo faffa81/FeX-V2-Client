@@ -504,16 +504,29 @@ void CSpectator::OnRender()
 				}
 			}
 		}
+
+		int ClientId = m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId;
 		float TeeAlpha;
-		if(Client()->State() == IClient::STATE_DEMOPLAYBACK &&
-			!m_pClient->m_Snap.m_aCharacters[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_Active)
+		float Alpha = 0.5f;
+		if(PlayerSelected)
+			Alpha = 1.0f;
+		if(Client()->State() == IClient::STATE_DEMOPLAYBACK &&	!m_pClient->m_Snap.m_aCharacters[ClientId].m_Active)
 		{
 			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 0.25f);
 			TeeAlpha = 0.5f;
 		}
 		else
 		{
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, PlayerSelected ? 1.0f : 0.5f);
+			ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, Alpha);
+			if(GameClient()->m_Fex.m_TempPlayers[ClientId].IsTempWar)
+				Color = GameClient()->m_WarList.m_WarTypes[1]->m_Color;
+			else if(GameClient()->m_Fex.m_TempPlayers[ClientId].IsTempHelper)
+				Color = GameClient()->m_WarList.m_WarTypes[3]->m_Color;
+			else if(GameClient()->m_WarList.GetAnyWar(ClientId))
+				Color = GameClient()->m_WarList.GetPriorityColor(ClientId);
+			else if(m_pClient->m_aClients[ClientId].m_Friend)
+				Color =  color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendColor));
+			TextRender()->TextColor(Color.WithAlpha(Alpha));
 			TeeAlpha = 1.0f;
 		}
 		CTextCursor NameCursor;
@@ -570,12 +583,16 @@ void CSpectator::OnRender()
 
 		RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos, TeeAlpha);
 
-		if(m_pClient->m_aClients[m_pClient->m_Snap.m_apInfoByDDTeamName[i]->m_ClientId].m_Friend)
+		if(m_pClient->m_aClients[ClientId].m_Friend)
 		{
 			ColorRGBA rgb = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageFriendColor));
 			TextRender()->TextColor(rgb.WithAlpha(1.f));
 			TextRender()->Text(Width / 2.0f + x - TeeInfo.m_Size / 2.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, "♥", 220.0f);
-			TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+		}
+		else if(g_Config.m_ClWarlistPrefixes && g_Config.m_ClWarList && GameClient()->m_WarList.GetAnyWar(ClientId)) // A-Client
+		{
+			TextRender()->TextColor(GameClient()->m_WarList.GetPriorityColor(ClientId));
+			TextRender()->Text(Width / 2.0f + x - TeeInfo.m_Size / 2.0f, Height / 2.0f + y + BoxMove + (LineHeight - FontSize) / 2.f, FontSize, g_Config.m_ClWarlistPrefix, 220.0f);
 		}
 
 		y += LineHeight;

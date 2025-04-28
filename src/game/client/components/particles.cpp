@@ -344,3 +344,4 @@ void CParticles::RenderGroup(int Group)
 		Graphics()->BlendNormal();
 	}
 }
+

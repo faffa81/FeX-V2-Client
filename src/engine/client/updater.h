@@ -68,7 +68,6 @@ class CUpdater : public IUpdater
 	bool m_ClientFetched;
 	bool m_ServerFetched;
 
-	void AddFileJob(const char *pFile, bool Job);
 	void FetchFile(const char *pFile, const char *pDestPath = nullptr) REQUIRES(!m_Lock);
 	bool MoveFile(const char *pFile);
 
@@ -80,9 +79,11 @@ class CUpdater : public IUpdater
 	bool ReplaceClient();
 	bool ReplaceServer();
 
-	void SetCurrentState(EUpdaterState NewState) REQUIRES(!m_Lock);
+
 
 public:
+	void SetCurrentState(EUpdaterState NewState) REQUIRES(!m_Lock);
+	void AddFileJob(const char *pFile, bool Job);
 	CUpdater();
 
 	EUpdaterState GetCurrentState() override REQUIRES(!m_Lock);

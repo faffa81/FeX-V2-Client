@@ -10,6 +10,10 @@
 #include <game/generated/client_data7.h>
 #include <game/generated/protocol.h>
 
+// fex
+#include <game/client/projectile_data.h>
+#include <game/client/laser_data.h>
+
 #include <game/mapitems.h>
 
 #include <game/client/animstate.h>
@@ -26,6 +30,8 @@
 
 #include <base/color.h>
 #include <base/math.h>
+
+#include "fex/fexvisual.h"
 
 void CPlayers::RenderHand(const CTeeRenderInfo *pInfo, vec2 CenterPos, vec2 Dir, float AngleOffset, vec2 PostRotOffset, float Alpha)
 {
@@ -353,6 +359,8 @@ void CPlayers::RenderHookCollLine(
 		}
 	}
 }
+
+
 void CPlayers::RenderHook(
 	const CNetObj_Character *pPrevChar,
 	const CNetObj_Character *pPlayerChar,
@@ -366,6 +374,8 @@ void CPlayers::RenderHook(
 	Player = *pPlayerChar;
 
 	CTeeRenderInfo RenderInfo = *pRenderInfo;
+
+	bool Local = m_pClient->m_Snap.m_LocalClientId == ClientId;
 
 	// don't render hooks to not active character cores
 	if(pPlayerChar->m_HookedPlayer != -1 && !m_pClient->m_Snap.m_aCharacters[pPlayerChar->m_HookedPlayer].m_Active)
@@ -408,9 +418,14 @@ void CPlayers::RenderHook(
 
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_SpriteHookHead);
 		Graphics()->QuadsSetRotation(angle(Dir) + pi);
+		bool DontOthers = !g_Config.m_ClVisualHookOthers && !Local;
 		// render head
 		int QuadOffset = NUM_WEAPONS * 2 + 2;
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+
+
+		if(g_Config.m_ClVisualHook && !DontOthers)
+			Graphics()->SetColor(GameClient()->m_Visual.m_Hook.m_VisualColor.WithAlpha(Alpha));
+
 		Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, QuadOffset, HookPos.x, HookPos.y);
 
 		// render chain
@@ -430,6 +445,9 @@ void CPlayers::RenderHook(
 
 		Graphics()->QuadsSetRotation(0);
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+		if(g_Config.m_ClVisualHook && !DontOthers)
+			Graphics()->SetColor(GameClient()->m_Visual.m_Hook.m_VisualColor.WithAlpha(Alpha));
 
 		RenderHand(&RenderInfo, Position, normalize(HookPos - Pos), -pi / 2, vec2(20, 0), Alpha);
 	}
@@ -451,7 +469,20 @@ void CPlayers::RenderPlayer(
 
 	bool Local = m_pClient->m_Snap.m_LocalClientId == ClientId;
 	bool OtherTeam = m_pClient->IsOtherTeam(ClientId);
-	float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
+	//float Alpha = (OtherTeam || ClientId < 0) ? g_Config.m_ClShowOthersAlpha / 100.0f : 1.0f;
+	bool Spec = m_pClient->m_Snap.m_SpecInfo.m_Active;
+
+	RenderTools()->m_LocalTeeRender = Local; // TClient
+
+	float Alpha = 1.0f;
+	if(OtherTeam || ClientId < 0)
+		Alpha = g_Config.m_ClShowOthersAlpha / 100.0f;
+	else if(g_Config.m_ClShowOthersGhosts && !Local && !Spec)
+		Alpha = g_Config.m_ClPredGhostsAlpha / 100.0f;
+
+	if(!OtherTeam && g_Config.m_ClShowOthersGhosts && !Local && g_Config.m_ClUnpredOthersInFreeze && g_Config.m_ClAmIFrozen && !Spec)
+		Alpha = 1.0f;
+
 	if(ClientId == -2) // ghost
 		Alpha = g_Config.m_ClRaceGhostAlpha / 100.0f;
 
@@ -508,6 +539,8 @@ void CPlayers::RenderPlayer(
 
 	bool Stationary = Player.m_VelX <= 1 && Player.m_VelX >= -1;
 	bool InAir = !Collision()->CheckPoint(Player.m_X, Player.m_Y + 16);
+	if(g_Config.m_ClAntiPingImproved && !Local)
+		InAir = !Collision()->CheckPoint(Position.x, Position.y + 16);
 	bool Running = Player.m_VelX >= 5000 || Player.m_VelX <= -5000;
 	bool WantOtherDir = (Player.m_Direction == -1 && Vel.x > 0) || (Player.m_Direction == 1 && Vel.x < 0);
 	bool Inactive = ClientId >= 0 && (m_pClient->m_aClients[ClientId].m_Afk || m_pClient->m_aClients[ClientId].m_Paused);
@@ -582,7 +615,10 @@ void CPlayers::RenderPlayer(
 			Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeapons[CurrentWeapon]);
 			int QuadOffset = CurrentWeapon * 2 + (Direction.x < 0 ? 1 : 0);
 
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+			bool DontOthers = !g_Config.m_ClVisualWeaponOthers && !Local;
+			bool DontOthersPlayers = !g_Config.m_ClVisualTeesOthers && !Local;
+			if(g_Config.m_ClVisualWeapon && !DontOthers)
+				Graphics()->SetColor(GameClient()->m_Visual.m_Weapon.m_VisualColor.WithAlpha(Alpha));
 
 			vec2 Dir = Direction;
 			float Recoil = 0.0f;
@@ -738,8 +774,10 @@ void CPlayers::RenderPlayer(
 					}
 				}
 			}
-			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 			Graphics()->QuadsSetRotation(0);
+
+			if(g_Config.m_ClVisualTees && !DontOthersPlayers)
+				Graphics()->SetColor(GameClient()->m_Visual.m_Tees.m_VisualColor.WithAlpha(Alpha));
 
 			switch(Player.m_Weapon)
 			{
@@ -944,28 +982,25 @@ void CPlayers::OnRender()
 	// render everyone else's tee, then either our own or the tee we are spectating.
 	const int RenderLastId = (m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW && m_pClient->m_Snap.m_SpecInfo.m_Active) ? m_pClient->m_Snap.m_SpecInfo.m_SpectatorId : LocalClientId;
 
-	for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
-	{
-		if(ClientId == RenderLastId || !m_pClient->m_Snap.m_aCharacters[ClientId].m_Active || !IsPlayerInfoAvailable(ClientId))
-		{
-			continue;
-		}
-
+    for(int ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+    {
+        if(ClientId == RenderLastId || !m_pClient->m_Snap.m_aCharacters[ClientId].m_Active || !IsPlayerInfoAvailable(ClientId))
+            continue;
+	
 		RenderHookCollLine(&m_pClient->m_aClients[ClientId].m_RenderPrev, &m_pClient->m_aClients[ClientId].m_RenderCur, ClientId);
+        
+        RenderPlayer(&m_pClient->m_aClients[ClientId].m_RenderPrev, &m_pClient->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
+    }
 
-		if(!in_range(m_pClient->m_aClients[ClientId].m_RenderPos.x, ScreenX0, ScreenX1) || !in_range(m_pClient->m_aClients[ClientId].m_RenderPos.y, ScreenY0, ScreenY1))
-		{
-			continue;
-		}
-		RenderPlayer(&m_pClient->m_aClients[ClientId].m_RenderPrev, &m_pClient->m_aClients[ClientId].m_RenderCur, &aRenderInfo[ClientId], ClientId);
-	}
-	if(RenderLastId != -1 && m_pClient->m_Snap.m_aCharacters[RenderLastId].m_Active && IsPlayerInfoAvailable(RenderLastId))
-	{
-		const CGameClient::CClientData *pClientData = &m_pClient->m_aClients[RenderLastId];
-		RenderHookCollLine(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
-		RenderPlayer(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, &aRenderInfo[RenderLastId], RenderLastId);
-	}
+    if(RenderLastId != -1 && m_pClient->m_Snap.m_aCharacters[RenderLastId].m_Active && IsPlayerInfoAvailable(RenderLastId))
+    {
+        const CGameClient::CClientData *pClientData = &m_pClient->m_aClients[RenderLastId];
+
+        RenderHookCollLine(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, RenderLastId);
+        RenderPlayer(&pClientData->m_RenderPrev, &pClientData->m_RenderCur, &aRenderInfo[RenderLastId], RenderLastId);
+    }
 }
+
 
 void CPlayers::OnInit()
 {

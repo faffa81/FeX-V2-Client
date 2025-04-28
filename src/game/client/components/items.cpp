@@ -135,7 +135,7 @@ void CItems::RenderProjectile(const CProjectileData *pCurrent, int ItemId)
 	if(GameClient()->m_GameSkin.m_aSpriteWeaponProjectiles[CurWeapon].IsValid())
 	{
 		Graphics()->TextureSet(GameClient()->m_GameSkin.m_aSpriteWeaponProjectiles[CurWeapon]);
-		Graphics()->SetColor(1.f, 1.f, 1.f, Alpha);
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
 		Graphics()->RenderQuadContainerAsSprite(m_ItemsQuadContainerIndex, m_aProjectileOffset[CurWeapon], Pos.x, Pos.y);
 	}
 }
@@ -542,7 +542,7 @@ void CItems::OnRender()
 	}
 
 	Graphics()->QuadsSetRotation(0);
-	Graphics()->SetColor(1.f, 1.f, 1.f, 1.f);
+	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.f);
 }
 
 void CItems::OnInit()

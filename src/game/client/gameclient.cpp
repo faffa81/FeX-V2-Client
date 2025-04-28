@@ -78,6 +78,9 @@
 #include "prediction/entities/character.h"
 #include "prediction/entities/projectile.h"
 
+#include "components/fex/fx_enums.h"
+#include "components/fex/fexversion.h"
+
 using namespace std::chrono_literals;
 
 const char *CGameClient::Version() const { return GAME_VERSION; }
@@ -85,6 +88,7 @@ const char *CGameClient::NetVersion() const { return GAME_NETVERSION; }
 const char *CGameClient::NetVersion7() const { return GAME_NETVERSION7; }
 int CGameClient::DDNetVersion() const { return DDNET_VERSION_NUMBER; }
 const char *CGameClient::DDNetVersionStr() const { return m_aDDNetVersionStr; }
+const char *CGameClient::FVersionStr() const { return m_aFexVersionStr; }
 int CGameClient::ClientVersion7() const { return CLIENT_VERSION7; }
 const char *CGameClient::GetItemName(int Type) const { return m_NetObjHandler.GetObjName(Type); }
 
@@ -116,6 +120,7 @@ void CGameClient::OnConsoleInit()
 					      &m_CountryFlags,
 					      &m_MapImages,
 					      &m_Effects, // doesn't render anything, just updates effects
+						  &m_SkinProfiles,
 					      &m_Binds,
 					      &m_Binds.m_SpecialBinds,
 					      &m_Controls,
@@ -124,24 +129,33 @@ void CGameClient::OnConsoleInit()
 					      &m_Voting,
 					      &m_Particles, // doesn't render anything, just updates all the particles
 					      &m_RaceDemo,
+						  &m_Visual,
 					      &m_MapSounds,
 					      &m_Background, // render instead of m_MapLayersBackground when g_Config.m_ClOverlayEntities == 100
 					      &m_MapLayersBackground, // first to render
 					      &m_Particles.m_RenderTrail,
 					      &m_Particles.m_RenderTrailExtra,
 					      &m_Items,
+						  &m_Trails,
 					      &m_Ghost,
 					      &m_Players,
 					      &m_MapLayersForeground,
+						  &m_Outlines,
 					      &m_Particles.m_RenderExplosions,
 					      &m_NamePlates,
 					      &m_Particles.m_RenderExtra,
 					      &m_Particles.m_RenderGeneral,
 					      &m_FreezeBars,
 					      &m_DamageInd,
+						  &m_PlayerIndicator,
+						  &m_Fex,
 					      &m_Hud,
 					      &m_Spectator,
 					      &m_Emoticon,
+						  &m_Bindchat,
+					      &m_Bindwheel,
+					      &m_WarList,
+					      &m_StatusBar,
 					      &m_InfoMessages,
 					      &m_Chat,
 					      &m_Broadcast,
@@ -152,6 +166,11 @@ void CGameClient::OnConsoleInit()
 					      &m_Motd,
 					      &m_Menus,
 					      &m_Tooltips,
+
+						  // FeX
+
+						  &m_FreezeKill,
+
 					      &CMenus::m_Binder,
 					      &m_GameConsole,
 					      &m_MenuBackground});
@@ -164,6 +183,7 @@ void CGameClient::OnConsoleInit()
 						  &m_Motd, // for pressing esc to remove it
 						  &m_Spectator,
 						  &m_Emoticon,
+						  &m_Bindwheel,
 						  &m_Menus,
 						  &m_Controls,
 						  &m_TouchControls,
@@ -260,6 +280,11 @@ void CGameClient::OnConsoleInit()
 	Console()->Chain("cl_dummy", ConchainSpecialDummy, this);
 
 	Console()->Chain("cl_menu_map", ConchainMenuMap, this);
+
+	Console()->Register("+player_score", "", CFGFLAG_CLIENT, ConAddPlayerScore, this, "Add score for player");
+    Console()->Register("+enemy_score", "", CFGFLAG_CLIENT, ConAddEnemyScore, this, "Add score for enemy");
+	Console()->Register("draw_score", "", CFGFLAG_CLIENT, ConDrawScore, this, "Scores are draw");
+	Console()->Register("remove_score", "", CFGFLAG_CLIENT, ConRemoveScore, this, "Accidental score can be withdrawed");
 }
 
 static void GenerateTimeoutCode(char *pTimeoutCode)
@@ -276,6 +301,7 @@ static void GenerateTimeoutCode(char *pTimeoutCode)
 	}
 }
 
+
 void CGameClient::InitializeLanguage()
 {
 	// set the language
@@ -287,6 +313,7 @@ void CGameClient::InitializeLanguage()
 
 void CGameClient::OnInit()
 {
+
 	const int64_t OnInitStart = time_get();
 
 	Client()->SetLoadingCallback([this](IClient::ELoadingCallbackDetail Detail) {
@@ -324,11 +351,11 @@ void CGameClient::OnInit()
 
 	if(GIT_SHORTREV_HASH)
 	{
-		str_format(m_aDDNetVersionStr, sizeof(m_aDDNetVersionStr), "%s %s (%s)", GAME_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH);
+		str_format(m_aDDNetVersionStr, sizeof(m_aDDNetVersionStr), "%s %s (%s)", CLIENT_NAME, GAME_RELEASE_VERSION, GIT_SHORTREV_HASH);
 	}
 	else
 	{
-		str_format(m_aDDNetVersionStr, sizeof(m_aDDNetVersionStr), "%s %s", GAME_NAME, GAME_RELEASE_VERSION);
+		str_format(m_aDDNetVersionStr, sizeof(m_aDDNetVersionStr), "%s %s", CLIENT_NAME, GAME_RELEASE_VERSION);
 	}
 
 	// TODO: this should be different
@@ -350,9 +377,13 @@ void CGameClient::OnInit()
 	// update and swap after font loading, they are quite huge
 	Client()->UpdateAndSwap();
 
-	const char *pLoadingDDNetCaption = Localize("Loading DDNet Client");
-	const char *pLoadingMessageComponents = Localize("Initializing components");
-	const char *pLoadingMessageComponentsSpecial = Localize("Why are you slowmo replaying to read this?");
+	char aFexVs[64];
+	str_format(aFexVs, sizeof(aFexVs), "Loading %s: %s", CLIENT_NAME, FEX_RELEASE_VERSION);
+
+
+	const char *pLoadingDDNetCaption = Localize(aFexVs);
+	const char *pLoadingMessageComponents = Localize("Removing System 32(joke)");
+	const char *pLoadingMessageComponentsSpecial = Localize("Damn you found this message, I'm impressed. Hello fellow gangstas");
 	char aLoadingMessage[256];
 
 	// init all components
@@ -376,13 +407,15 @@ void CGameClient::OnInit()
 		++CompCounter;
 	}
 
+
+	// random ddnet shit
 	m_GameSkinLoaded = false;
 	m_ParticlesSkinLoaded = false;
 	m_EmoticonsSkinLoaded = false;
 	m_HudSkinLoaded = false;
 
 	// setup load amount, load textures
-	const char *pLoadingMessageAssets = Localize("Initializing assets");
+	const char *pLoadingMessageAssets = Localize("rendering MC(gangsta)");
 	for(int i = 0; i < g_pData->m_NumImages; i++)
 	{
 		if(i == IMAGE_GAME)
@@ -432,6 +465,240 @@ void CGameClient::OnInit()
 
 	m_Menus.FinishLoading();
 	log_trace("gameclient", "initialization finished after %.2fms", (time_get() - OnInitStart) * 1000.0f / (float)time_freq());
+}
+
+void CGameClient::ConAddPlayerScore(IConsole::IResult *pResult, void *pUserData)
+{
+    CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+
+	if(!g_Config.m_Cl1v1ModeShowHud)
+		return;
+
+    
+    // Check cooldown
+    if(time_get() < pClient->m_1v1LastScoreTime + SCORE_COOLDOWN)
+        return;
+        
+    pClient->m_1v1LastScoreTime = time_get();
+    pClient->m_1v1PlayerScore++;
+	pClient->m_1v1LastScorePlayer = true;
+
+	char name[16];
+
+	if(g_Config.m_ClDummy)
+	{
+		str_format(name, sizeof(name), "%s", g_Config.m_ClDummyName);
+	}
+	else
+	{
+		str_format(name, sizeof(name), "%s", pClient->Client()->PlayerName());
+	}
+
+    // Send chat message
+    char aBuf[256];
+	if(g_Config.m_Cl1v1ModeCustom)
+	{
+		str_format(aBuf, sizeof(aBuf), g_Config.m_Cl1v1ModeCustomMsg, name, pClient->m_1v1PlayerScore, pClient->m_1v1EnemyScore, g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+	}
+	else
+	{
+		str_format(aBuf, sizeof(aBuf), "%s %d | %d %s", name, pClient->m_1v1PlayerScore, pClient->m_1v1EnemyScore, g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+	}
+	if(pClient->m_1v1PlayerScore >= g_Config.m_Cl1v1ModeScoreLimit)
+	{
+		const char* pEnemyName = g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy";
+		str_format(aBuf, sizeof(aBuf), "%s wins! GG! -- %s", name, pEnemyName);     
+		if (g_Config.m_Cl1v1ModeEcho)
+		{
+			pClient->m_Chat.Echo(aBuf);
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+		else
+		{
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+        pClient->m_1v1PlayerScore = 0;
+        pClient->m_1v1EnemyScore = 0;
+	}
+	else
+	{
+		if (g_Config.m_Cl1v1ModeEcho)
+		{
+			pClient->m_Chat.Echo(aBuf);
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+		else
+		{
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+	}
+}
+
+void CGameClient::ConAddEnemyScore(IConsole::IResult *pResult, void *pUserData)
+{
+    CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+
+	if(!g_Config.m_Cl1v1ModeShowHud)
+		return;
+    
+    // Check cooldown
+	if(time_get() - pClient->m_1v1LastScoreTime < pClient->SCORE_COOLDOWN)
+        return;
+        
+    pClient->m_1v1LastScoreTime = time_get();
+    pClient->m_1v1EnemyScore++;
+	pClient->m_1v1LastScorePlayer = false;
+
+	char name[16];
+
+	if(g_Config.m_ClDummy)
+	{
+		str_format(name, sizeof(name), "%s", g_Config.m_ClDummyName);
+	}
+	else
+	{
+		str_format(name, sizeof(name), "%s", pClient->Client()->PlayerName());
+	}
+
+    // Send chat message
+	char aBuf[256];
+	if(g_Config.m_Cl1v1ModeCustom)
+	{
+		str_format(aBuf, sizeof(aBuf), g_Config.m_Cl1v1ModeCustomMsg, name, pClient->m_1v1PlayerScore, pClient->m_1v1EnemyScore, g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+	}
+	else
+	{
+		str_format(aBuf, sizeof(aBuf), "%s %d | %d %s", name, pClient->m_1v1PlayerScore, pClient->m_1v1EnemyScore, g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+	}
+	if(pClient->m_1v1EnemyScore >= g_Config.m_Cl1v1ModeScoreLimit)
+	{
+        const char* pEnemyName = g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy";
+        str_format(aBuf, sizeof(aBuf), "%s wins! GG!", pEnemyName);
+		if (g_Config.m_Cl1v1ModeEcho)
+		{
+			pClient->m_Chat.Echo(aBuf);
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+		else
+		{
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+        pClient->m_1v1PlayerScore = 0;
+        pClient->m_1v1EnemyScore = 0;
+	}
+	else
+	{
+		if (g_Config.m_Cl1v1ModeEcho)
+		{
+			pClient->m_Chat.Echo(aBuf);
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+		else
+		{
+			pClient->m_Chat.SendChat(0, aBuf);
+		}
+	}
+}
+
+void CGameClient::ConDrawScore(IConsole::IResult *pResult, void *pUserData)
+{
+    CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+
+	if(!g_Config.m_Cl1v1ModeShowHud)
+		return;
+
+    // Check cooldown
+    if(time_get() < pClient->m_1v1LastScoreTime + SCORE_COOLDOWN)
+        return;
+        
+    pClient->m_1v1LastScoreTime = time_get();
+
+	char name[16];
+
+	if(g_Config.m_ClDummy)
+	{
+		str_format(name, sizeof(name), "%s", g_Config.m_ClDummyName);
+	}
+	else
+	{
+		str_format(name, sizeof(name), "%s", pClient->Client()->PlayerName());
+	}
+
+    // Send chat message
+    char aBuf[256];
+    str_format(aBuf, sizeof(aBuf), "Draw: %s %d | %d %s", 
+        name,
+        pClient->m_1v1PlayerScore,
+        pClient->m_1v1EnemyScore,
+        g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+	if (g_Config.m_Cl1v1ModeEcho)
+	{
+		pClient->m_Chat.Echo(aBuf);
+		pClient->m_Chat.SendChat(0, aBuf);
+	}
+	else
+	{
+		pClient->m_Chat.SendChat(0, aBuf);
+	}
+}
+
+void CGameClient::ConRemoveScore(IConsole::IResult *pResult, void *pUserData)
+{
+    CGameClient *pClient = static_cast<CGameClient *>(pUserData);
+
+	if(!g_Config.m_Cl1v1ModeShowHud)
+		return;
+
+    // Check cooldown
+    if(time_get() < pClient->m_1v1LastScoreTime + SCORE_COOLDOWN)
+        return;
+        
+    pClient->m_1v1LastScoreTime = time_get();
+
+	if(pClient->m_1v1LastScorePlayer == true)
+	{
+		pClient->m_1v1PlayerScore--;
+		if(pClient->m_1v1PlayerScore == -1)
+		{
+			pClient->m_1v1PlayerScore++;
+		}
+	}
+	else if(pClient->m_1v1LastScorePlayer == false)
+	{
+		pClient->m_1v1EnemyScore--;
+		if(pClient->m_1v1EnemyScore == -1)
+		{
+			pClient->m_1v1EnemyScore++;
+		}
+	}
+
+	char name[16];
+
+	if(g_Config.m_ClDummy)
+	{
+		str_format(name, sizeof(name), "%s", g_Config.m_ClDummyName);
+	}
+	else
+	{
+		str_format(name, sizeof(name), "%s", pClient->Client()->PlayerName());
+	}
+
+    // Send chat message
+    char aBuf[256];
+    str_format(aBuf, sizeof(aBuf), "Withdrawed score: %s %d | %d %s", 
+        name,
+        pClient->m_1v1PlayerScore,
+        pClient->m_1v1EnemyScore,
+        g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+	if (g_Config.m_Cl1v1ModeEcho)
+	{
+		pClient->m_Chat.Echo(aBuf);
+		pClient->m_Chat.SendChat(0, aBuf);
+	}
+	else
+	{
+		pClient->m_Chat.SendChat(0, aBuf);
+	}
 }
 
 void CGameClient::OnUpdate()
@@ -760,6 +1027,7 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+	// DDNETTTTT
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
 	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
 
@@ -976,6 +1244,7 @@ void CGameClient::OnRelease()
 
 void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dummy)
 {
+
 	// special messages
 	static_assert((int)NETMSGTYPE_SV_TUNEPARAMS == (int)protocol7::NETMSGTYPE_SV_TUNEPARAMS, "0.6 and 0.7 tune message id do not match");
 	if(MsgId == NETMSGTYPE_SV_TUNEPARAMS)
@@ -1263,9 +1532,9 @@ void CGameClient::RenderShutdownMessage()
 {
 	const char *pMessage = nullptr;
 	if(Client()->State() == IClient::STATE_QUITTING)
-		pMessage = Localize("Quitting. Please wait…");
+		pMessage = Localize("Quitting FeX. Please wait…");
 	else if(Client()->State() == IClient::STATE_RESTARTING)
-		pMessage = Localize("Restarting. Please wait…");
+		pMessage = Localize("Restarting FeX. Please wait…");
 	else
 		dbg_assert(false, "Invalid client state for quitting message");
 
@@ -1765,6 +2034,17 @@ void CGameClient::OnNewSnapshot()
 					pClient->m_Predicted.ReadDDNet(pCharacterData);
 
 					m_Teams.SetSolo(Item.m_Id, pClient->m_Solo);
+
+					// Warlist
+					pClient->m_IsWar = m_WarList.GetWarData(Item.m_Id).m_WarGroupMatches[1] || m_Fex.m_TempPlayers[Item.m_Id].IsTempWar;
+					pClient->m_IsTeam = m_WarList.GetWarData(Item.m_Id).m_WarGroupMatches[2];
+					pClient->m_IsHelper = m_WarList.GetWarData(Item.m_Id).m_WarGroupMatches[3] || m_Fex.m_TempPlayers[Item.m_Id].IsTempHelper;
+
+					pClient->m_Id = Item.m_Id;
+
+					pClient->m_IsMute = m_Fex.m_TempPlayers[Item.m_Id].IsTempMute || m_WarList.m_WarPlayers[Item.m_Id].IsMuted;
+
+					pClient->m_IsAnyList = m_WarList.m_WarPlayers[Item.m_Id].IsWarName;
 				}
 			}
 			else if(Item.m_Type == NETOBJTYPE_SPECCHAR)
@@ -1968,7 +2248,6 @@ void CGameClient::OnNewSnapshot()
 	{
 		// update friend state
 		m_aClients[i].m_Friend = !(i == m_Snap.m_LocalClientId || !m_Snap.m_apPlayerInfos[i] || !Friends()->IsFriend(m_aClients[i].m_aName, m_aClients[i].m_aClan, true));
-
 		// update foe state
 		m_aClients[i].m_Foe = !(i == m_Snap.m_LocalClientId || !m_Snap.m_apPlayerInfos[i] || !Foes()->IsFriend(m_aClients[i].m_aName, m_aClients[i].m_aClan, true));
 	}
@@ -2329,12 +2608,26 @@ void CGameClient::OnPredict()
 	if(PredictDummy())
 		pDummyChar = m_PredictedWorld.GetCharacterById(m_PredictedDummyId);
 
-	int PredictionTick = Client()->GetPredictionTick();
+	bool RealPredTick = false;
 	// predict
-	for(int Tick = Client()->GameTick(g_Config.m_ClDummy) + 1; Tick <= Client()->PredGameTick(g_Config.m_ClDummy); Tick++)
+	// prediction actually happens here
+
+	int FinalTickRegular = Client()->PredGameTick(g_Config.m_ClDummy); // The vanilla final tick disregarding fast input
+	int FinalTickSelf = FinalTickRegular + g_Config.m_ClFastInput; // the final tick for just our local tee
+	int FinalTickOthers = FinalTickSelf; // the final tick for all other tees
+	if(g_Config.m_ClFastInput && !g_Config.m_ClFastInputOthers)
+		FinalTickOthers = FinalTickSelf - g_Config.m_ClFastInput;
+
+	for(int Tick = Client()->GameTick(g_Config.m_ClDummy) + 1; Tick <= FinalTickSelf; Tick++)
 	{
 		// fetch the previous characters
-		if(Tick == PredictionTick)
+		if(Tick == FinalTickSelf)
+		{
+			m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
+			m_PredictedPrevChar = pLocalChar->GetCore();
+			m_aClients[m_Snap.m_LocalClientId].m_PrevPredicted = pLocalChar->GetCore();
+		}
+		if(Tick == FinalTickOthers)
 		{
 			for(int i = 0; i < MAX_CLIENTS; i++)
 				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
@@ -2359,6 +2652,9 @@ void CGameClient::OnPredict()
 		CNetObj_PlayerInput *pDummyInputData = !pDummyChar ? nullptr : (CNetObj_PlayerInput *)Client()->GetInput(Tick, m_IsDummySwapping ^ 1);
 		bool DummyFirst = pInputData && pDummyInputData && pDummyChar->GetCid() < pLocalChar->GetCid();
 
+		if(g_Config.m_ClFastInput && Tick == FinalTickSelf)
+			pInputData = &m_Controls.m_FastInput;
+
 		if(DummyFirst)
 			pDummyChar->OnDirectInput(pDummyInputData);
 		if(pInputData)
@@ -2373,10 +2669,13 @@ void CGameClient::OnPredict()
 		m_PredictedWorld.Tick();
 
 		// fetch the current characters
-		if(Tick == PredictionTick)
+		if(Tick == FinalTickSelf)
 		{
-			m_PrevPredictedWorld.CopyWorld(&m_PredictedWorld);
-
+			m_PredictedChar = pLocalChar->GetCore();
+			m_aClients[m_Snap.m_LocalClientId].m_Predicted = pLocalChar->GetCore();
+		}
+		if(Tick == FinalTickOthers)
+		{
 			for(int i = 0; i < MAX_CLIENTS; i++)
 				if(CCharacter *pChar = m_PredictedWorld.GetCharacterById(i))
 					m_aClients[i].m_Predicted = pChar->GetCore();
@@ -2399,12 +2698,14 @@ void CGameClient::OnPredict()
 			}
 
 		// check if we want to trigger effects
-		if(Tick > m_aLastNewPredictedTick[Dummy])
+		if(Tick > m_aLastNewPredictedTick[Dummy] && (Tick <= FinalTickRegular))
 		{
 			m_aLastNewPredictedTick[Dummy] = Tick;
 			m_NewPredictedTick = true;
+			RealPredTick = true;
 			vec2 Pos = pLocalChar->Core()->m_Pos;
 			int Events = pLocalChar->Core()->m_TriggeredEvents;
+
 			if(g_Config.m_ClPredict && !m_SuppressEvents)
 				if(Events & COREEVENT_AIR_JUMP)
 					m_Effects.AirJump(Pos, 1.0f);
@@ -2431,8 +2732,55 @@ void CGameClient::OnPredict()
 		}
 	}
 
+	if(g_Config.m_ClFastInput)
+		m_PredictedWorld.CopyWorld(&m_PrevPredictedWorld);
+
+	if(g_Config.m_ClRemoveAnti)
+	{
+		m_ExtraPredictedWorld.CopyWorldClean(&m_PredictedWorld);
+
+		// Remove other tees to reduce lag and because they aren't really important in this case
+		for(int i = 0; i < MAX_CLIENTS; i++)
+			if(i != m_Snap.m_LocalClientId)
+				if(CCharacter *pDelChar = m_ExtraPredictedWorld.GetCharacterById(i))
+					pDelChar->Destroy();
+
+		CCharacter *pExtraChar = m_ExtraPredictedWorld.GetCharacterById(m_Snap.m_LocalClientId);
+		if(pExtraChar)
+		{
+			bool Unfrozen = false;
+			bool Frozen = false;
+			for(int i = 0; i < g_Config.m_ClUnfreezeLagDelayTicks; i++)
+			{
+				if(!pExtraChar)
+					continue;
+
+				if(Frozen && pExtraChar->m_AliveAccumulation > 0)
+					Unfrozen = true;
+
+				if(pExtraChar->m_AliveAccumulation < 0)
+					Frozen = true;
+
+				if(!Unfrozen)
+				{
+					m_ExtraPredictedWorld.m_GameTick++;
+					m_ExtraPredictedWorld.Tick();
+				}
+				else
+				{
+					pExtraChar->m_AliveAccumulation = std::max(pExtraChar->m_AliveAccumulation, 1);
+					pExtraChar->m_AliveAccumulation = std::min(pExtraChar->m_AliveAccumulation + 1, g_Config.m_ClUnfreezeLagDelayTicks);
+				}
+			}
+		}
+	}
+
 	// detect mispredictions of other players and make corrections smoother when possible
-	if(g_Config.m_ClAntiPingSmooth && Predict() && AntiPingPlayers() && m_NewTick && m_PredictedTick >= MIN_TICK && absolute(m_PredictedTick - Client()->PredGameTick(g_Config.m_ClDummy)) <= 1 && absolute(Client()->GameTick(g_Config.m_ClDummy) - Client()->PrevGameTick(g_Config.m_ClDummy)) <= 2)
+	if(g_Config.m_ClAntiPingSmooth &&
+		Predict() && AntiPingPlayers() &&
+		m_NewTick && m_PredictedTick >= MIN_TICK &&
+		absolute(m_PredictedTick - Client()->PredGameTick(g_Config.m_ClDummy)) <= 1 &&
+		absolute(Client()->GameTick(g_Config.m_ClDummy) - Client()->PrevGameTick(g_Config.m_ClDummy)) <= 2)
 	{
 		int PredTime = clamp(Client()->GetPredictionTime(), 0, 800);
 		float SmoothPace = 4 - 1.5f * PredTime / 800.f; // smoothing pace (a lower value will make the smoothing quicker)
@@ -2442,7 +2790,7 @@ void CGameClient::OnPredict()
 		{
 			if(!m_Snap.m_aCharacters[i].m_Active || i == m_Snap.m_LocalClientId || !m_aLastActive[i])
 				continue;
-			vec2 NewPos = (m_PredictedTick == Client()->PredGameTick(g_Config.m_ClDummy)) ? m_aClients[i].m_Predicted.m_Pos : m_aClients[i].m_PrevPredicted.m_Pos;
+			vec2 NewPos = (m_PredictedTick == FinalTickSelf) ? m_aClients[i].m_Predicted.m_Pos : m_aClients[i].m_PrevPredicted.m_Pos;
 			vec2 PredErr = (m_aLastPos[i] - NewPos) / (float)minimum(Client()->GetPredictionTime(), 200);
 			if(in_range(length(PredErr), 0.05f, 5.f))
 			{
@@ -2488,12 +2836,213 @@ void CGameClient::OnPredict()
 		}
 	}
 
+	// TClient
+	// New antiping smoothing
+	CCharacter *pSmoothLocalChar = m_PredSmoothingWorld.GetCharacterById(m_Snap.m_LocalClientId);
+	if(g_Config.m_ClAntiPingImproved &&
+		Predict() && AntiPingPlayers() &&
+		pSmoothLocalChar &&
+		RealPredTick && m_PredictedTick >= MIN_TICK)
+	{
+		int PredTime = clamp(Client()->GetPredictionTime(), 0, 8000); // Milliseconds for some reason?? TODO: Use more precision
+
+		// Nightmare: in order to get 100% accurate comparison to detect mispredictions we must
+		// tick the PREVIOUS predicted world with our CURRENT predicted inputs
+		CCharacter *pSmoothDummyChar = 0;
+		CCharacter *pPredDummyChar = 0;
+		if(PredictDummy())
+		{
+			pSmoothDummyChar = m_PredSmoothingWorld.GetCharacterById(m_PredictedDummyId);
+			pPredDummyChar = m_PredictedWorld.GetCharacterById(m_PredictedDummyId);
+		}
+		CNetObj_PlayerInput *pInputData = m_PredictedWorld.GetCharacterById(m_Snap.m_LocalClientId)->LatestInput();
+		CNetObj_PlayerInput *pDummyInputData = !pPredDummyChar ? 0 : m_PredictedWorld.GetCharacterById(m_PredictedDummyId)->LatestInput();
+		bool DummyFirst = pSmoothLocalChar && pSmoothDummyChar && pSmoothDummyChar->GetCid() < pSmoothLocalChar->GetCid();
+
+		if(DummyFirst && pSmoothDummyChar && pDummyInputData)
+			pSmoothDummyChar->OnDirectInput(pDummyInputData);
+
+		if(pInputData && pSmoothLocalChar)
+			pSmoothLocalChar->OnDirectInput(pInputData);
+
+		if(!DummyFirst && pSmoothDummyChar && pDummyInputData)
+			pSmoothDummyChar->OnDirectInput(pDummyInputData);
+
+		m_PredSmoothingWorld.m_GameTick++;
+
+		if(pInputData && pSmoothLocalChar)
+			pSmoothLocalChar->OnPredictedInput(pInputData);
+
+		if(pDummyInputData && pSmoothDummyChar)
+			pSmoothDummyChar->OnPredictedInput(pDummyInputData);
+		m_PredSmoothingWorld.Tick();
+
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(!m_Snap.m_aCharacters[i].m_Active || !m_aLastActive[i])
+				continue;
+
+			if(i == m_PredictedDummyId || i == m_Snap.m_LocalClientId)
+			{
+				m_aClients[i].m_PrevImprovedPredPos = m_aClients[i].m_PrevPredicted.m_Pos;
+				m_aClients[i].m_ImprovedPredPos = m_aClients[i].m_Predicted.m_Pos;
+				continue;
+			}
+
+			CCharacter *pChar = m_PredSmoothingWorld.GetCharacterById(i);
+			if(!pChar)
+				continue;
+
+			vec2 PredPos = m_aClients[i].m_Predicted.m_Pos;
+			if(g_Config.m_ClFastInputOthers && g_Config.m_ClFastInput)
+				PredPos = m_aClients[i].m_PrevPredicted.m_Pos;
+
+			vec2 PrevPredPos = pChar->GetCore().m_Pos;
+
+			// Cursed hack to get the game tick consistently
+			int GameTick = Client()->GameTick(g_Config.m_ClDummy) + (int)Client()->IntraGameTick(g_Config.m_ClDummy);
+			static int PrevGameTick = 0;
+			if(PrevGameTick == GameTick)
+				GameTick++;
+			PrevGameTick = Client()->GameTick(g_Config.m_ClDummy) + (int)Client()->IntraGameTick(g_Config.m_ClDummy);
+
+			vec2 ServerPos = m_aClients[i].m_aPredPos[GameTick % 200];
+			vec2 PrevServerPos = m_aClients[i].m_aPredPos[(GameTick - 1) % 200];
+
+			vec2 PredDir = normalize(PredPos - ServerPos);
+			vec2 LastDir = normalize(PrevPredPos - ServerPos);
+
+			vec2 MaxPos = vec2(0, 0);
+			vec2 MinPos = vec2(0, 0);
+			// Get a bounding box for our final prediction position to minimize going through walls
+			for(int Tick = GameTick - 1; Tick <= FinalTickOthers; Tick++)
+			{
+				if(m_aClients[i].m_aPredTick[Tick % 200] == 0)
+					continue;
+				vec2 Pos = m_aClients[i].m_aPredPos[Tick % 200];
+				if(Tick == GameTick - 1)
+				{
+					MaxPos = Pos;
+					MinPos = Pos;
+				}
+				else
+				{
+					MaxPos.x = std::max(Pos.x, MaxPos.x);
+					MaxPos.y = std::max(Pos.y, MaxPos.y);
+					MinPos.x = std::min(Pos.x, MinPos.x);
+					MinPos.y = std::min(Pos.y, MinPos.y);
+				}
+			}
+			int PredStartTick = GameTick;
+			int HistoryStartTick = PredStartTick - (FinalTickOthers - PredStartTick);
+			HistoryStartTick = std::max(0, HistoryStartTick);
+			vec2 HistoryVector = vec2(0, 0);
+			float HistoryDistance = 0.0f;
+			// Find the average history vector
+			for(int Tick = HistoryStartTick; Tick <= PredStartTick; Tick++)
+			{
+				if(m_aClients[i].m_aPredTick[Tick % 200] == 0 || m_aClients[i].m_aPredTick[(Tick - 1) % 200] == 0)
+					continue;
+				vec2 DirVector = m_aClients[i].m_aPredPos[Tick % 200] - m_aClients[i].m_aPredPos[(Tick - 1) % 200];
+				HistoryVector += DirVector;
+				HistoryDistance += length(DirVector);
+			}
+
+			int HistoryCount = (PredStartTick - HistoryStartTick + 1);
+			HistoryVector = HistoryVector / HistoryCount;
+			HistoryVector = normalize(HistoryVector);
+			float Variance = 0.0f;
+			// Find the variance over the history window
+			if(length(HistoryVector) > 0.0f)
+			{
+				for(int Tick = HistoryStartTick; Tick <= PredStartTick; Tick++)
+				{
+					if(m_aClients[i].m_aPredTick[Tick % 200] == 0 || m_aClients[i].m_aPredTick[(Tick - 1) % 200] == 0)
+						continue;
+					vec2 DirVector = m_aClients[i].m_aPredPos[Tick % 200] - m_aClients[i].m_aPredPos[(Tick - 1) % 200];
+					vec2 Diff = normalize(DirVector) - HistoryVector;
+					Variance += dot(Diff, Diff);
+				}
+				Variance /= HistoryCount;
+			}
+			else
+			{
+				Variance = 0.0f;
+			}
+			float Sigma = 1.5f; // Can be adjusted
+			float SigmaScale = length(PredPos - ServerPos) / HistoryDistance;
+			if(SigmaScale > 0)
+				Sigma /= SigmaScale;
+			float TrustFactor = std::max(0.0f, 1.0f - (std::sqrt(Variance) / Sigma));
+			vec2 TrustedVector = HistoryVector;
+
+			// Detect mispredictions
+			float Confidence = 1.0f;
+			if(PredDir == vec2(0, 0))
+				Confidence = 1.0f;
+			else
+			{
+				Confidence = std::max(0.0f, dot(LastDir, PredDir));
+				Confidence = std::pow(Confidence, 4.0f); // Can be adjusted
+			}
+			float Uncertainty = 1.0f - Confidence;
+			float TickDuration = (float)1000 / (float)Client()->GameTickSpeed();
+
+			// Manage uncertainty value
+			float PredTimeScale = (float)g_Config.m_ClAntiPingUncertaintyScale / 100.0f;
+			float TickSize = TickDuration / ((float)PredTime * PredTimeScale); // 20ms / PredTime
+			float PrevConfidence = 1.0f - m_aClients[i].m_Uncertainty;
+			float NewConfidence = PrevConfidence - Uncertainty + TickSize;
+			float MinConfidence = g_Config.m_ClAntiPingNegativeBuffer ? -1.0f : 0.0f;
+			NewConfidence = std::clamp(NewConfidence, MinConfidence, 1.0f); // A certain about of "negative buffer" is allowed
+			m_aClients[i].m_Uncertainty = 1.0f - NewConfidence;
+			NewConfidence = std::max(0.0f, NewConfidence);
+
+			// Decompose prediction vector into 2 components based on the trusted vector
+			vec2 PredVector = PredPos - ServerPos;
+			vec2 Forward = normalize(TrustedVector);
+			float dotPF = std::max(0.0f, dot(normalize(PredVector), Forward));
+			vec2 ConfidenceParallel = Forward * dotPF * length(PredVector);
+			if(dotPF == 0.0f)
+				ConfidenceParallel = vec2(0, 0);
+			vec2 ConfidencePerp = PredVector - ConfidenceParallel;
+
+			if(!g_Config.m_ClAntiPingStableDirection)
+				TrustFactor = 0.0f;
+
+			vec2 ConfidenceVector = ConfidenceParallel * std::max(TrustFactor, NewConfidence) + ConfidencePerp * NewConfidence;
+
+			// Minor safe gaurd against insane predictions
+			if(length(ConfidenceVector) > HistoryDistance)
+				ConfidenceVector = mix(normalize(ConfidenceVector) * HistoryDistance, ConfidenceVector, NewConfidence);
+
+			vec2 ConfidencePos = ServerPos + ConfidenceVector;
+
+			// Clamp final position to bounding box
+			ConfidencePos.x = std::clamp(ConfidencePos.x, MinPos.x, MaxPos.x);
+			ConfidencePos.y = std::clamp(ConfidencePos.y, MinPos.y, MaxPos.y);
+
+			m_aClients[i].m_PrevImprovedPredPos = m_aClients[i].m_ImprovedPredPos;
+			m_aClients[i].m_ImprovedPredPos = ConfidencePos;
+			if(distance(ServerPos, PrevServerPos) > 600.0f || distance(m_aClients[i].m_PrevImprovedPredPos, m_aClients[i].m_ImprovedPredPos) > 600.0f)
+			{
+				m_aClients[i].m_PrevImprovedPredPos = m_aClients[i].m_ImprovedPredPos;
+			}
+		}
+	}
+	// Copy the current pred world so on the next tick we have the "previous" pred world to advance and test against
+	if(m_NewPredictedTick && g_Config.m_ClAntiPingImproved)
+		m_PredSmoothingWorld.CopyWorldClean(&m_PredictedWorld);
+
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(m_Snap.m_aCharacters[i].m_Active)
 		{
-			m_aLastPos[i] = m_aClients[i].m_Predicted.m_Pos;
-			m_aLastActive[i] = true;
+			if(m_NewPredictedTick)
+			{
+				m_aLastPos[i] = m_aClients[i].m_Predicted.m_Pos;
+				m_aLastActive[i] = true;
+			}
 		}
 		else
 			m_aLastActive[i] = false;
@@ -2520,7 +3069,7 @@ void CGameClient::OnPredict()
 		}
 	}
 
-	m_PredictedTick = Client()->PredGameTick(g_Config.m_ClDummy);
+	m_PredictedTick = FinalTickSelf;
 
 	if(m_NewPredictedTick)
 		m_Ghost.OnNewPredictedSnapshot();
@@ -2940,6 +3489,9 @@ void CGameClient::SendDummyInfo(bool Start)
 
 void CGameClient::SendKill() const
 {
+	if(g_Config.m_Cl1v1ModeKillLock)
+		return;
+	
 	CNetMsg_Cl_Kill Msg;
 	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
 
@@ -3542,12 +4094,75 @@ vec2 CGameClient::GetSmoothPos(int ClientId)
 			int SmoothTick;
 			float SmoothIntra;
 			Client()->GetSmoothTick(&SmoothTick, &SmoothIntra, MixAmount);
-			if(SmoothTick > 0 && m_aClients[ClientId].m_aPredTick[(SmoothTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) && m_aClients[ClientId].m_aPredTick[SmoothTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy))
+
+			if(ClientId != m_Snap.m_LocalClientId && g_Config.m_ClFastInputOthers && g_Config.m_ClFastInput)
+				SmoothTick += g_Config.m_ClFastInput;
+
+			if(SmoothTick > 0 &&
+				m_aClients[ClientId].m_aPredTick[(SmoothTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
+				m_aClients[ClientId].m_aPredTick[SmoothTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy) + g_Config.m_ClFastInput)
 				Pos[i] = mix(m_aClients[ClientId].m_aPredPos[(SmoothTick - 1) % 200][i], m_aClients[ClientId].m_aPredPos[SmoothTick % 200][i], SmoothIntra);
 		}
 	}
 	return Pos;
 }
+
+vec2 CGameClient::GetFreezePos(int ClientId)
+{
+	vec2 Pos = mix(m_aClients[ClientId].m_PrevPredicted.m_Pos, m_aClients[ClientId].m_Predicted.m_Pos, Client()->PredIntraGameTick(g_Config.m_ClDummy));
+	// int64_t Now = time_get();
+	CCharacter *pChar = m_PredictedWorld.GetCharacterById(m_Snap.m_LocalClientId);
+	CCharacter *pExtraChar = m_ExtraPredictedWorld.GetCharacterById(m_Snap.m_LocalClientId);
+
+	for(int i = 0; i < 2; i++)
+	{
+		// int64_t Len = clamp(m_aClients[ClientId].m_aSmoothLen[i], (int64_t)1, time_freq());
+		// int64_t TimePassed = Now - m_aClients[ClientId].m_aSmoothStart[i];
+		float MixAmount = 0.0f;
+		int SmoothTick;
+		float SmoothIntra;
+
+		int AdjustTicks = 0;
+		int DelayTicks = g_Config.m_ClUnfreezeLagDelayTicks;
+		int FreezeTime = 0;
+		if(pExtraChar && pChar)
+		{
+			AdjustTicks = pChar->m_FreezeAccumulation;
+			if(pExtraChar->m_AliveAccumulation > 0)
+				AdjustTicks -= pExtraChar->m_AliveAccumulation;
+
+			AdjustTicks = std::max(AdjustTicks, 0);
+			FreezeTime = pChar->m_FreezeTime;
+
+			AdjustTicks = std::min(FreezeTime, AdjustTicks);
+		}
+		if(g_Config.m_ClRemoveAnti && pChar && AdjustTicks > 0 && FreezeTime > 0)
+			MixAmount = mix(0.0f, 1.0f, 1.0f - AdjustTicks / (float)DelayTicks);
+		// else if(AdjustTicks == 0 && ClientId != m_Snap.m_LocalClientId)
+		//	MixAmount = 1.f - std::pow(1.f - TimePassed / (float)Len, 1.2f);
+		else // our tee when not frozen
+			MixAmount = 1.f;
+
+		Client()->GetSmoothFreezeTick(&SmoothTick, &SmoothIntra, MixAmount);
+
+		m_SmoothTick[i] = SmoothTick;
+		m_SmoothIntraTick[i] = SmoothIntra;
+
+		if(ClientId != m_Snap.m_LocalClientId && g_Config.m_ClFastInputOthers && g_Config.m_ClFastInput)
+			SmoothTick += g_Config.m_ClFastInput;
+		else if(ClientId == m_Snap.m_LocalClientId && g_Config.m_ClFastInput)
+			SmoothTick += g_Config.m_ClFastInput;
+
+		if(SmoothTick > 0 &&
+			m_aClients[ClientId].m_aPredTick[(SmoothTick - 1) % 200] >= Client()->PrevGameTick(g_Config.m_ClDummy) &&
+			m_aClients[ClientId].m_aPredTick[SmoothTick % 200] <= Client()->PredGameTick(g_Config.m_ClDummy) + g_Config.m_ClFastInput)
+		{
+			Pos[i] = mix(m_aClients[ClientId].m_aPredPos[(SmoothTick - 1) % 200][i], m_aClients[ClientId].m_aPredPos[SmoothTick % 200][i], SmoothIntra);
+		}
+	}
+	return Pos;
+}
+
 
 void CGameClient::Echo(const char *pString)
 {
@@ -4747,4 +5362,14 @@ int CGameClient::FindFirstMultiViewId()
 			return i;
 	}
 	return ClientId;
+}
+
+bool CGameClient::CheckNewInput()
+{
+	return m_Controls.CheckNewInput();
+}
+
+void CGameClient::aMessage(const char *pString)
+{
+	m_Chat.AddLine(TEAM_MESSAGE, 0, pString);
 }

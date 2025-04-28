@@ -1,0 +1,31 @@
+TARGET = Some("x86_64-pc-windows-gnu")
+OPT_LEVEL = Some("3")
+HOST = Some("x86_64-pc-windows-gnu")
+CXX_x86_64-pc-windows-gnu = None
+CXX_x86_64_pc_windows_gnu = None
+HOST_CXX = None
+CXX = None
+CXXFLAGS_x86_64-pc-windows-gnu = None
+CXXFLAGS_x86_64_pc_windows_gnu = None
+HOST_CXXFLAGS = None
+CXXFLAGS = None
+CRATE_CC_NO_DEFAULTS = None
+DEBUG = Some("false")
+CARGO_CFG_TARGET_FEATURE = Some("cmpxchg16b,fxsr,sse,sse2,sse3")
+running: "g++.exe" "-O3" "-ffunction-sections" "-fdata-sections" "-m64" "-Wall" "-Wextra" "-o" "C:/DDNetClients/FeX/FeX.1/build\\release\\build\\link-cplusplus-6d2569d4d9b60863\\out\\dummy.o" "-c" "C:/DDNetClients/FeX/FeX.1/build\\release\\build\\link-cplusplus-6d2569d4d9b60863\\out\\dummy.cc"
+exit code: 0
+AR_x86_64-pc-windows-gnu = None
+AR_x86_64_pc_windows_gnu = None
+HOST_AR = None
+AR = None
+running: "ar" "cq" "C:/DDNetClients/FeX/FeX.1/build\\release\\build\\link-cplusplus-6d2569d4d9b60863\\out\\liblink-cplusplus.a" "C:/DDNetClients/FeX/FeX.1/build\\release\\build\\link-cplusplus-6d2569d4d9b60863\\out\\dummy.o"
+exit code: 0
+running: "ar" "s" "C:/DDNetClients/FeX/FeX.1/build\\release\\build\\link-cplusplus-6d2569d4d9b60863\\out\\liblink-cplusplus.a"
+exit code: 0
+cargo:rustc-link-lib=static=link-cplusplus
+cargo:rustc-link-search=native=C:/DDNetClients/FeX/FeX.1/build\release\build\link-cplusplus-6d2569d4d9b60863\out
+CXXSTDLIB_x86_64-pc-windows-gnu = None
+CXXSTDLIB_x86_64_pc_windows_gnu = None
+HOST_CXXSTDLIB = None
+CXXSTDLIB = None
+cargo:rustc-link-lib=stdc++

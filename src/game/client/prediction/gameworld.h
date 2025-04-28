@@ -97,6 +97,7 @@ public:
 	void NetCharAdd(int ObjId, CNetObj_Character *pChar, CNetObj_DDNetCharacter *pExtended, int GameTeam, bool IsLocal);
 	void NetObjAdd(int ObjId, int ObjType, const void *pObjData, const CNetObj_EntityEx *pDataEx);
 	void NetObjEnd();
+	void CopyWorldClean(CGameWorld *pFrom);
 	void CopyWorld(CGameWorld *pFrom);
 	CEntity *FindMatch(int ObjId, int ObjType, const void *pObjData);
 	void Clear();

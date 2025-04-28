@@ -21,6 +21,7 @@
 #include <game/localization.h>
 
 #include "menus.h"
+#include "fex/fexwarlist.h"
 
 using namespace FontIcons;
 
@@ -1369,6 +1370,30 @@ void CMenus::RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *
 	}
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void CMenus::RenderServerbrowserFriends(CUIRect View)
 {
 	const float FontSize = 10.0f;
@@ -1661,6 +1686,459 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	}
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void CMenus::RenderServerbrowserWars(CUIRect View)
+{
+    const float FontSize = 10.0f;
+    static bool s_aListExtended[3] = {true, true, false}; // Online names, Online clans, Offline
+	const float DropdownHeight = 20.0f;
+    const float SpacingH = 2.0f;
+
+    CUIRect List, ServerWars;
+    View.HSplitBottom(70.0f, &List, &ServerWars);
+    List.HSplitTop(5.0f, nullptr, &List);
+    List.VSplitLeft(5.0f, nullptr, &List);
+
+	// Add dropdown area at top
+	CUIRect WarTypeDropdown;
+	List.HSplitTop(DropdownHeight, &WarTypeDropdown, &List); // Add dropdown at top
+	List.HSplitTop(5.0f, nullptr, &List); // Add spacing after dropdown
+	static int s_WarTypeDropdown = 0;
+	static const char *s_aWarTypeNames[] = {
+		"All Entries",
+		"Enemy Entries", 
+		"Team Entries",
+		"Helper Entries"
+	};
+	// Create dropdown for war type filter
+	{
+		
+		WarTypeDropdown.VSplitRight(200.0f, nullptr, &WarTypeDropdown); // Align right
+		static CUi::SDropDownState s_WarTypeFilter;
+		static CScrollRegion s_WarTypeScrollRegion;
+		s_WarTypeFilter.m_SelectionPopupContext.m_pScrollRegion = &s_WarTypeScrollRegion;
+		
+		const int NewSelected = Ui()->DoDropDown(&WarTypeDropdown, s_WarTypeDropdown, s_aWarTypeNames, std::size(s_aWarTypeNames), s_WarTypeFilter);
+		if(s_WarTypeDropdown != NewSelected)
+		{
+			s_WarTypeDropdown = NewSelected;
+		}
+	}
+
+    // Setup scrolling
+    static CScrollRegion s_ScrollRegion;
+    vec2 ScrollOffset(0.0f, 0.0f);
+    CScrollRegionParams ScrollParams;
+    ScrollParams.m_ScrollbarWidth = 16.0f;
+    ScrollParams.m_ScrollbarMargin = 5.0f;
+    ScrollParams.m_ScrollUnit = 80.0f;
+    ScrollParams.m_Flags = CScrollRegionParams::FLAG_CONTENT_STATIC_WIDTH;
+    s_ScrollRegion.Begin(&List, &ScrollOffset, &ScrollParams);
+    List.y += ScrollOffset.y;
+
+    // Categorize wars
+    std::vector<CWarEntry*> vOnlineNames;
+    std::vector<CWarEntry*> vOnlineClan;
+    std::vector<CWarEntry*> vOffline;
+
+	// At the start of RenderServerbrowserWars:
+
+	// Clear lists and track online status
+	vOnlineNames.clear();
+	vOnlineClan.clear();
+	vOffline.clear();
+	std::vector<bool> vIsOnline(GameClient()->m_WarList.m_WarEntries.size(), false);
+
+	// Scan servers to find online players/clans
+	for(int ServerIndex = 0; ServerIndex < ServerBrowser()->NumSortedServers(); ++ServerIndex)
+	{
+		const CServerInfo *pServer = ServerBrowser()->SortedGet(ServerIndex);
+		
+		for(size_t i = 0; i < GameClient()->m_WarList.m_WarEntries.size(); i++)
+		{
+			CWarEntry* pWar = &GameClient()->m_WarList.m_WarEntries[i];
+			
+			// Check all players in server
+			for(int c = 0; c < pServer->m_NumClients; c++)
+			{
+				const CServerInfo::CClient &CurrentClient = pServer->m_aClients[c];
+				
+				if((str_comp(pWar->m_aName, CurrentClient.m_aName) == 0 && pWar->m_aName[0] != '\0') ||
+				(str_comp(pWar->m_aClan, CurrentClient.m_aClan) == 0 && pWar->m_aClan[0] != '\0'))
+				{
+					vIsOnline[i] = true;
+					if(str_comp(pWar->m_aClan, "") != 0)
+					{
+						// Add to online clan wars if not already there
+						pWar->m_ServerInfo = pServer;
+						if(std::find(vOnlineClan.begin(), vOnlineClan.end(), pWar) == vOnlineClan.end())
+							vOnlineClan.push_back(pWar);
+					}
+					else
+					{
+						// Add to online wars if not already there
+						pWar->m_ServerInfo = pServer;
+						if(std::find(vOnlineNames.begin(), vOnlineNames.end(), pWar) == vOnlineNames.end())
+							vOnlineNames.push_back(pWar);
+					}
+					break;
+				}
+			}
+		}
+	}
+
+	// Add offline entries
+	for(size_t i = 0; i < GameClient()->m_WarList.m_WarEntries.size(); i++)
+	{
+		if(!vIsOnline[i])
+		{
+			CWarEntry* pWar = &GameClient()->m_WarList.m_WarEntries[i];
+			pWar->m_ServerInfo = nullptr;
+			vOffline.push_back(pWar);
+		}
+	}
+
+	// After categorizing wars but before rendering sections, add:
+	if(s_WarTypeDropdown > 0) // 0 = All Wars
+	{
+		const char* pFilterType = nullptr;
+		switch(s_WarTypeDropdown)
+		{
+			case 1: pFilterType = "enemy"; break;
+			case 2: pFilterType = "team"; break; 
+			case 3: pFilterType = "helper"; break;
+		}
+
+		if(pFilterType)
+		{
+			auto FilterPredicate = [pFilterType](CWarEntry* pEntry) {
+				return str_comp(pEntry->m_pWarType->m_aWarName, pFilterType) != 0;
+			};
+
+			vOnlineNames.erase(
+				std::remove_if(vOnlineNames.begin(), vOnlineNames.end(), FilterPredicate),
+				vOnlineNames.end()
+			);
+
+			vOnlineClan.erase(
+				std::remove_if(vOnlineClan.begin(), vOnlineClan.end(), FilterPredicate),
+				vOnlineClan.end()
+			);
+
+			vOffline.erase(
+				std::remove_if(vOffline.begin(), vOffline.end(), FilterPredicate),
+				vOffline.end()
+			);
+		}
+	}
+
+	// Sort all lists
+	std::sort(vOnlineNames.begin(), vOnlineNames.end());
+	std::sort(vOnlineClan.begin(), vOnlineClan.end());  
+	std::sort(vOffline.begin(), vOffline.end());
+
+
+
+    // Render sections
+    const std::vector<CWarEntry*>* pSections[] = {&vOnlineNames, &vOnlineClan, &vOffline};
+    const char* pSectionTitles[] = {"Online entries (%d)", "Online clan entries (%d)", "Offline entries (%d)"};
+
+    char aBuf[256];
+    for(int Section = 0; Section < 3; Section++) 
+    {
+        // Header
+        CUIRect Header, GroupIcon, GroupLabel;
+        List.HSplitTop(ms_ListheaderHeight, &Header, &List);
+        s_ScrollRegion.AddRect(Header);
+
+        Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_aListExtended[Section] ? 0.4f : 0.25f), IGraphics::CORNER_ALL, 5.0f);
+        Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
+        GroupIcon.Margin(2.0f, &GroupIcon);
+
+        // Minimize/Maximize button
+        TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+        TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+        Ui()->DoLabel(&GroupIcon, s_aListExtended[Section] ? FONT_ICON_MINUS : FONT_ICON_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+        TextRender()->SetRenderFlags(0);
+        TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+        // Section name
+        str_format(aBuf, sizeof(aBuf), Localize(pSectionTitles[Section]), (int)pSections[Section]->size());
+        Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
+
+        // Expand/collapse button
+        if(Ui()->DoButtonLogic(&s_aListExtended[Section], 0, &Header, BUTTONFLAG_LEFT))
+        {
+            s_aListExtended[Section] = !s_aListExtended[Section];
+        }
+
+        // Entries
+        if(s_aListExtended[Section])
+        {
+            static std::vector<CButtonContainer> s_vDeleteButtons;
+            s_vDeleteButtons.resize(pSections[Section]->size());
+
+            for(size_t i = 0; i < pSections[Section]->size(); i++)
+            {
+                CWarEntry* pEntry = (*pSections[Section])[i];
+
+                CUIRect Space;
+                List.HSplitTop(SpacingH, &Space, &List);
+                s_ScrollRegion.AddRect(Space);
+
+                CUIRect Rect, DeleteButton;
+                List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f, &Rect, &List);
+                s_ScrollRegion.AddRect(Rect);
+                if(s_ScrollRegion.RectClipped(Rect))
+                    continue;
+
+                const bool Inside = Ui()->HotItem() == pEntry;
+				int ButtonResult = Ui()->DoButtonLogic(pEntry, 0, &Rect, BUTTONFLAG_LEFT);
+                const ColorRGBA Color = pEntry->m_pWarType->m_Color.WithAlpha(Inside ? 0.5f : 0.25f);
+                Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);
+                Rect.Margin(2.0f, &Rect);
+
+                // Delete button
+                Rect.VSplitRight(20.0f, &Rect, &DeleteButton);
+                if(DoButton_FontIcon(&s_vDeleteButtons[i], FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
+                {
+                    GameClient()->m_WarList.RemoveWarEntry(pEntry);
+                    continue;
+                }
+
+                // Name/Clan & Info
+                CUIRect NameRect, InfoRect;
+                Rect.HSplitMid(&NameRect, &InfoRect);
+
+                // Name/Clan
+                Ui()->DoLabel(&NameRect, str_comp(pEntry->m_aClan, "") != 0 ? pEntry->m_aClan : pEntry->m_aName, 
+                    FontSize, TEXTALIGN_ML);
+
+                // Server info if online
+                if(pEntry->m_ServerInfo)
+                {
+                    if(ButtonResult)
+                    {
+                        str_copy(g_Config.m_UiServerAddress, pEntry->m_ServerInfo->m_aAddress);
+                        m_ServerBrowserShouldRevealSelection = true;
+                        
+                        if(ButtonResult == 1 && Ui()->DoDoubleClickLogic(pEntry))
+                        {
+                            Connect(g_Config.m_UiServerAddress);
+                        }
+                    }
+                }
+
+                // War type  
+                TextRender()->TextColor(pEntry->m_pWarType->m_Color);
+                Ui()->DoLabel(&InfoRect, pEntry->m_pWarType->m_aWarName,
+                    FontSize - 1.0f, TEXTALIGN_ML);
+                TextRender()->TextColor(TextRender()->DefaultTextColor());
+
+                // Reason tooltip
+                if(str_comp(pEntry->m_aReason, "") != 0)
+                {
+                    GameClient()->m_Tooltips.DoToolTip(pEntry, &Rect, pEntry->m_aReason);
+                }
+            }
+        }
+
+        CUIRect Space;
+        List.HSplitTop(SpacingH, &Space, &List);
+        s_ScrollRegion.AddRect(Space);
+    }
+
+    s_ScrollRegion.End();
+
+    // Add war section
+    RenderWarListAddSection(ServerWars);
+}
+
+void CMenus::RenderWarListAddSection(CUIRect View)
+{
+    const float FontSize = 10.0f;
+    const float ButtonHeight = 15.0f;
+    const float Spacing = 2.0f;
+    
+    static CLineInputBuffered<MAX_NAME_LENGTH> s_NameInput;
+    static CLineInputBuffered<MAX_CLAN_LENGTH> s_ClanInput;
+    static CLineInputBuffered<MAX_WARLIST_REASON_LENGTH> s_ReasonInput;
+    static CButtonContainer s_AddButton;
+    static int s_SelectedType = 0; // 0 = war, 1 = team, 2 = helper
+
+    CUIRect Button;
+    View.Margin(5.0f, &View);
+
+    // Top row: Name and Clan inputs
+    View.HSplitTop(ButtonHeight, &Button, &View);
+    
+    // Split for Name and Clan
+    CUIRect NameArea, ClanArea;
+    Button.VSplitMid(&NameArea, &ClanArea);
+    NameArea.VSplitRight(Spacing, &NameArea, nullptr);
+    
+    // Name input
+    {
+        CUIRect Label, Input;
+        NameArea.VSplitLeft(30.0f, &Label, &Input);
+        Ui()->DoLabel(&Label, "Name:", FontSize, TEXTALIGN_LEFT);
+        Ui()->DoEditBox(&s_NameInput, &Input, FontSize);
+    }
+
+    // Clan input
+    {
+        CUIRect Label, Input;
+        ClanArea.VSplitLeft(30.0f, &Label, &Input);
+        Ui()->DoLabel(&Label, "Clan:", FontSize, TEXTALIGN_LEFT);
+        Ui()->DoEditBox(&s_ClanInput, &Input, FontSize);
+    }
+
+    // Second row: Reason input and war type buttons
+    View.HSplitTop(Spacing, nullptr, &View);
+    View.HSplitTop(ButtonHeight, &Button, &View);
+    
+    // Split for Reason and Type buttons
+    CUIRect ReasonArea, TypeArea;
+    Button.VSplitMid(&ReasonArea, &TypeArea);
+    ReasonArea.VSplitRight(Spacing, &ReasonArea, nullptr);
+
+    // Reason input
+    {
+        CUIRect Label, Input;
+        ReasonArea.VSplitLeft(30.0f, &Label, &Input);
+        Ui()->DoLabel(&Label, "Why:", FontSize, TEXTALIGN_LEFT);
+        Ui()->DoEditBox(&s_ReasonInput, &Input, FontSize);
+    }
+
+	// War type buttons
+	{
+		CUIRect WarButton, TeamButton, HelperButton;
+		TypeArea.VSplitLeft(TypeArea.w/3.0f, &WarButton, &TypeArea);
+		TypeArea.VSplitLeft(TypeArea.w/2.0f, &TeamButton, &HelperButton);
+
+		static CButtonContainer s_WarButton;
+		static CButtonContainer s_TeamButton;
+		static CButtonContainer s_HelperButton;
+
+		// War button (red)
+		const ColorRGBA WarColor = ColorRGBA(1.0f, 0.0f, 0.0f, s_SelectedType == 0 ? 0.5f : 0.25f);
+		WarButton.Draw(WarColor, IGraphics::CORNER_ALL, 5.0f);
+		if(DoButton_Menu(&s_WarButton, s_SelectedType == 0 ? "→!W!" : "!W!", 0, &WarButton))
+		{
+			s_SelectedType = 0;
+		}
+
+		// Team button (green)  
+		const ColorRGBA TeamColor = ColorRGBA(0.0f, 1.0f, 0.0f, s_SelectedType == 1 ? 0.5f : 0.25f); 
+		TeamButton.Draw(TeamColor, IGraphics::CORNER_ALL, 5.0f);
+		if(DoButton_Menu(&s_TeamButton, s_SelectedType == 1 ? "→!T!" : "!T!", 0, &TeamButton))
+		{
+			s_SelectedType = 1;
+		}
+
+		// Helper button (blue)
+		const ColorRGBA HelperColor = ColorRGBA(0.0f, 0.0f, 1.0f, s_SelectedType == 2 ? 0.5f : 0.25f);
+		HelperButton.Draw(HelperColor, IGraphics::CORNER_ALL, 5.0f);
+		if(DoButton_Menu(&s_HelperButton, s_SelectedType == 2 ? "→!H!" : "!H!", 0, &HelperButton))
+		{
+			s_SelectedType = 2;
+		}
+	}
+
+	// Add button
+	View.HSplitTop(Spacing, nullptr, &View);
+	View.HSplitTop(ButtonHeight, &Button, &View);
+
+	if(DoButton_Menu(&s_AddButton, 
+		s_NameInput.IsEmpty() && !s_ClanInput.IsEmpty() ? 
+		Localize("Add Clan War") : Localize("Add War"), 0, &Button))
+	{
+		const char* pWarType;
+		switch(s_SelectedType)
+		{
+			case 0: pWarType = "enemy"; break; // War type
+			case 1: pWarType = "team"; break;  // Team type
+			case 2: pWarType = "helper"; break; // Helper type
+			default: pWarType = "enemy";
+		}
+
+		GameClient()->m_WarList.AddWarEntry(
+			s_NameInput.GetString(),
+			s_ClanInput.GetString(),
+			s_ReasonInput.GetString(),
+			pWarType
+		);
+
+		s_NameInput.Clear();
+		s_ClanInput.Clear();
+		s_ReasonInput.Clear();
+		Client()->ServerBrowserUpdate();
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void CMenus::FriendlistOnUpdate()
 {
 	// TODO: friends are currently updated every frame; optimize and only update friends when necessary
@@ -1679,50 +2157,59 @@ enum
 	UI_TOOLBOX_PAGE_FILTERS = 0,
 	UI_TOOLBOX_PAGE_INFO,
 	UI_TOOLBOX_PAGE_FRIENDS,
+	UI_TOOLBOX_PAGE_WARS,
 	NUM_UI_TOOLBOX_PAGES,
 };
 
 void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 {
-	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton;
-	TabBar.VSplitLeft(TabBar.w / 3.0f, &FilterTabButton, &TabBar);
-	TabBar.VSplitMid(&InfoTabButton, &FriendsTabButton);
+	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton, WarsTabButton;
+	TabBar.VSplitLeft(TabBar.w / 4.0f, &FilterTabButton, &TabBar);
+	TabBar.VSplitLeft(TabBar.w / 4.0f, &InfoTabButton, &TabBar);
+	TabBar.VSplitMid(&FriendsTabButton, &WarsTabButton);
 
-	const ColorRGBA ColorActive = ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f);
-	const ColorRGBA ColorInactive = ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f);
+    const ColorRGBA ColorActive = ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f);
+    const ColorRGBA ColorInactive = ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f);
 
-	if(!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_TAB))
-	{
-		const int Direction = Input()->ShiftIsPressed() ? -1 : 1;
-		g_Config.m_UiToolboxPage = (g_Config.m_UiToolboxPage + NUM_UI_TOOLBOX_PAGES + Direction) % NUM_UI_TOOLBOX_PAGES;
-	}
+    if(!Ui()->IsPopupOpen() && Ui()->ConsumeHotkey(CUi::HOTKEY_TAB))
+    {
+        const int Direction = Input()->ShiftIsPressed() ? -1 : 1;
+        g_Config.m_UiToolboxPage = (g_Config.m_UiToolboxPage + NUM_UI_TOOLBOX_PAGES + Direction) % NUM_UI_TOOLBOX_PAGES;
+    }
 
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+    TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+    TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
-	static CButtonContainer s_FilterTabButton;
-	if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], &ColorInactive, &ColorActive))
-	{
-		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
-	}
-	GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
+    static CButtonContainer s_FilterTabButton;
+    if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], &ColorInactive, &ColorActive))
+    {
+        g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
+    }
+    GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
 
-	static CButtonContainer s_InfoTabButton;
-	if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], &ColorInactive, &ColorActive))
-	{
-		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
-	}
-	GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
+    static CButtonContainer s_InfoTabButton;
+    if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], &ColorInactive, &ColorActive))
+    {
+        g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
+    }
+    GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
-	static CButtonContainer s_FriendsTabButton;
-	if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive))
-	{
-		g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
-	}
-	GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
+    static CButtonContainer s_FriendsTabButton;
+    if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive))
+    {
+        g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
+    }
+    GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
 
-	TextRender()->SetRenderFlags(0);
-	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+	static CButtonContainer s_WarsTabButton;
+    if(DoButton_MenuTab(&s_WarsTabButton, "W", g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_WARS, &WarsTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_WARS], &ColorInactive, &ColorActive))
+    {
+        g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_WARS;
+    }
+    GameClient()->m_Tooltips.DoToolTip(&s_WarsTabButton, &WarsTabButton, Localize("Wars"));
+
+    TextRender()->SetRenderFlags(0);
+    TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 }
 
 void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
@@ -1739,6 +2226,9 @@ void CMenus::RenderServerbrowserToolBox(CUIRect ToolBox)
 		return;
 	case UI_TOOLBOX_PAGE_FRIENDS:
 		RenderServerbrowserFriends(ToolBox);
+		return;
+	case UI_TOOLBOX_PAGE_WARS:
+		RenderServerbrowserWars(ToolBox);
 		return;
 	default:
 		dbg_assert(false, "ui_toolbox_page invalid");

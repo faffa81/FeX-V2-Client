@@ -32,7 +32,6 @@ class CMapLayers : public CComponent
 	CMapImages *m_pImages;
 
 	int m_Type;
-	bool m_OnlineOnly;
 
 	struct STileLayerVisuals
 	{
@@ -131,6 +130,7 @@ class CMapLayers : public CComponent
 	void LayersOfGroupCount(CMapItemGroup *pGroup, int &TileLayerCount, int &QuadLayerCount, bool &PassedGameLayer);
 
 public:
+	bool m_OnlineOnly;
 	enum
 	{
 		TYPE_BACKGROUND = 0,

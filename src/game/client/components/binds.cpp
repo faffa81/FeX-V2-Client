@@ -29,6 +29,7 @@ bool CBinds::CBindsSpecial::OnInput(const IInput::CEvent &Event)
 
 CBinds::CBinds()
 {
+	
 	mem_zero(m_aapKeyBindings, sizeof(m_aapKeyBindings));
 	m_SpecialBinds.m_pBinds = this;
 }
@@ -299,6 +300,11 @@ void CBinds::SetDefaults()
 	Bind(KEY_K, "kill");
 	Bind(KEY_Q, "say /spec");
 	Bind(KEY_P, "say /pause");
+
+	Bind(KEY_LEFT, "+player_score", false); 
+    Bind(KEY_RIGHT, "+enemy_score", false);
+	Bind(KEY_DOWN, "draw_score", false);
+	Bind(KEY_UP, "remove_score", false);
 
 	g_Config.m_ClDDRaceBindsSet = 0;
 	SetDDRaceBinds(false);

@@ -2785,6 +2785,11 @@ void CClient::Update()
 				}
 			}
 
+			if(g_Config.m_ClFastInput && GameClient()->CheckNewInput())
+			{
+				Repredict = true;
+			}
+
 			// only do sane predictions
 			if(Repredict)
 			{
@@ -5096,6 +5101,20 @@ void CClient::GetSmoothTick(int *pSmoothTick, float *pSmoothIntraTick, float Mix
 	*pSmoothIntraTick = (SmoothTime - (*pSmoothTick - 1) * time_freq() / GameTickSpeed()) / (float)(time_freq() / GameTickSpeed());
 }
 
+void CClient::GetSmoothFreezeTick(int *pSmoothTick, float *pSmoothIntraTick, float MixAmount)
+{
+	int64_t GameTime = m_aGameTime[g_Config.m_ClDummy].Get(time_get());
+	int64_t PredTime = m_PredictedTime.Get(time_get());
+	GameTime = std::min(GameTime, PredTime);
+
+	int64_t UpperPredTime = clamp(PredTime - (time_freq() / 50) * g_Config.m_ClUnfreezeLagTicks, GameTime, PredTime);
+	int64_t LowestPredTime = clamp(PredTime, GameTime, UpperPredTime);
+	int64_t SmoothTime = clamp(LowestPredTime + (int64_t)(MixAmount * (PredTime - LowestPredTime)), LowestPredTime, PredTime);
+
+	*pSmoothTick = (int)(SmoothTime * 50 / time_freq()) + 1;
+	*pSmoothIntraTick = (SmoothTime - (*pSmoothTick - 1) * time_freq() / 50) / (float)(time_freq() / 50);
+}
+
 void CClient::AddWarning(const SWarning &Warning)
 {
 	const std::unique_lock<std::mutex> Lock(m_WarningsMutex);
@@ -5124,7 +5143,11 @@ int CClient::MaxLatencyTicks() const
 
 int CClient::PredictionMargin() const
 {
-	return m_ServerCapabilities.m_SyncWeaponInput ? g_Config.m_ClPredictionMargin : 10;
+	if(g_Config.m_ClPredMarginInFreeze && g_Config.m_ClAmIFrozen)
+	{
+		return g_Config.m_ClPredMarginInFreezeAmount;
+	}
+	return g_Config.m_ClPredictionMargin;
 }
 
 int CClient::UdpConnectivity(int NetType)

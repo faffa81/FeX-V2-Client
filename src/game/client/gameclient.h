@@ -62,7 +62,21 @@
 #include "components/touch_controls.h"
 #include "components/voting.h"
 
+//fex
+
+#include "components/fex/fex.h"
+#include "components/fex/fexfreezekill.h"
+#include "components/fex/fexskinprofiles.h"
+#include "components/fex/fexwarlist.h"
+#include "components/fex/fexbindchat.h"
+#include "components/fex/fexvisual.h"
+
 #include <vector>
+#include "components/fex/fextrails.h"
+#include "components/fex/fexoutlines.h"
+#include "components/fex/fexstatusbar.h"
+#include "components/fex/fexbindwheel.h"
+#include "components/fex/fexplayerindicator.h"
 
 class CGameInfo
 {
@@ -128,8 +142,46 @@ enum class EClientIdFormat
 
 class CGameClient : public IGameClient
 {
+protected:
+    bool m_RequestingDuel;
+    int m_DuelTargetId;
+    char m_DuelTeam[64];
+    int m_LastWeapon;
+    bool m_WaitingForDuration;
+    bool m_SelectingTimeUnit;
+    char m_TimeUnit[8];
+    int m_DuelDuration;
+    
+
 public:
-	// all components
+
+	// FeX 1v1
+
+	bool m_1v1KillLocked;
+	int m_1v1EnemyScore;
+	int m_1v1PlayerScore;
+	static constexpr int64_t SCORE_COOLDOWN = 1000000000; // 1000ms in microseconds
+	static constexpr int64_t CHAT_MESSAGE_COOLDOWN = 2500000000; // 1000ms in microseconds
+    int64_t m_1v1LastScoreTime;
+	int64_t m_1v1LastChatTime;
+	bool m_1v1LastScorePlayer = false;
+
+	
+
+	// fex components
+	CFex m_Fex;
+	CBindchat m_Bindchat;
+	CSkinProfiles m_SkinProfiles;
+	CWarList m_WarList;
+	CFreezeKill m_FreezeKill;
+	CTrails m_Trails;
+	CPlayerIndicator m_PlayerIndicator;
+	COutlines m_Outlines;
+	CStatusBar m_StatusBar;
+	CBindWheel m_Bindwheel;
+	CVisual m_Visual;
+
+	// all components	
 	CInfoMessages m_InfoMessages;
 	CCamera m_Camera;
 	CChat m_Chat;
@@ -224,6 +276,9 @@ private:
 	int m_aCheckInfo[NUM_DUMMIES];
 
 	char m_aDDNetVersionStr[64];
+	char m_aFexVersionStr[64];
+
+	// DDNET STUFF
 
 	static void ConTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConKill(IConsole::IResult *pResult, void *pUserData);
@@ -312,7 +367,6 @@ public:
 	// predicted players
 	CCharacterCore m_PredictedPrevChar;
 	CCharacterCore m_PredictedChar;
-
 	// snap pointers
 	struct CSnapState
 	{
@@ -454,6 +508,13 @@ public:
 		CCharacterCore m_Predicted;
 		CCharacterCore m_PrevPredicted;
 
+		// FEX SHIT FROM TATER
+
+		vec2 m_ImprovedPredPos = vec2(0, 0);
+		vec2 m_PrevImprovedPredPos = vec2(0, 0);
+
+		float m_Uncertainty = 0.0f;
+
 		std::shared_ptr<CManagedTeeRenderInfo> m_pSkinInfo; // this is what the server reports
 		CTeeRenderInfo m_RenderInfo; // this is what we use
 
@@ -462,7 +523,19 @@ public:
 		bool m_ChatIgnore;
 		bool m_EmoticonIgnore;
 		bool m_Friend;
+		bool m_War;
 		bool m_Foe;
+
+		// Fex wars
+
+		int m_Id;
+
+		bool m_IsWar;
+		bool m_IsTeam;
+		bool m_IsHelper;
+
+		bool m_IsMute;
+		bool m_IsAnyList;
 
 		int m_AuthLevel;
 		bool m_Afk;
@@ -488,6 +561,7 @@ public:
 		bool m_SpecCharPresent;
 		vec2 m_SpecChar;
 
+
 		void UpdateSkinInfo();
 		void UpdateSkin7HatSprite(int Dummy);
 		void UpdateSkin7BotDecoration(int Dummy);
@@ -512,6 +586,10 @@ public:
 	};
 
 	CClientData m_aClients[MAX_CLIENTS];
+
+	// TClient
+	int m_SmoothTick[2] = {};
+	float m_SmoothIntraTick[2] = {};
 
 	class CClientStats
 	{
@@ -561,11 +639,20 @@ public:
 	// hooks
 	void OnConnected() override;
 	void OnRender() override;
+	static void ConAddEnemyScore(IConsole::IResult *pResult, void *pUserData);
 	void OnUpdate() override;
 	void OnDummyDisconnect() override;
 	virtual void OnRelease();
 	void OnInit() override;
+	static void ConAddPlayerScore(IConsole::IResult *pResult, void *pUserData);
+	static void ConDrawScore(IConsole::IResult *pResult, void *pUserData);
+	static void ConRemoveScore(IConsole::IResult *pResult, void *pUserData);
 	void OnConsoleInit() override;
+	
+	static void ConTASRecord(IConsole::IResult *pResult, void *pUserData);
+	static void ConTASPlay(IConsole::IResult *pResult, void *pUserData);
+	static void ConTASSpeed(IConsole::IResult *pResult, void *pUserData);
+	static void ConTASStop(IConsole::IResult *pResult, void *pUserData);
 	void OnStateChange(int NewState, int OldState) override;
 	template<typename T>
 	void ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn);
@@ -609,6 +696,7 @@ public:
 	const char *NetVersion7() const override;
 	int DDNetVersion() const override;
 	const char *DDNetVersionStr() const override;
+	const char *FVersionStr() const;
 	virtual int ClientVersion7() const override;
 
 	void DoTeamChangeMessage7(const char *pName, int ClientId, int Team, const char *pPrefix = "");
@@ -658,6 +746,10 @@ public:
 	CGameWorld m_PredictedWorld;
 	CGameWorld m_PrevPredictedWorld;
 
+	// TClient
+	CGameWorld m_ExtraPredictedWorld;
+	CGameWorld m_PredSmoothingWorld;
+
 	std::vector<SSwitchers> &Switchers() { return m_GameWorld.m_Core.m_vSwitchers; }
 	std::vector<SSwitchers> &PredSwitchers() { return m_PredictedWorld.m_Core.m_vSwitchers; }
 
@@ -669,6 +761,10 @@ public:
 	bool CanDisplayWarning() const override;
 	CNetObjHandler *GetNetObjHandler() override;
 	protocol7::CNetObjHandler *GetNetObjHandler7() override;
+
+	bool CheckNewInput() override;
+
+	void aMessage(const char *pString);
 
 	void LoadGameSkin(const char *pPath, bool AsDir = false);
 	void LoadEmoticonsSkin(const char *pPath, bool AsDir = false);
@@ -849,6 +945,8 @@ public:
 	int FindFirstMultiViewId();
 	void CleanMultiViewId(int ClientId);
 
+	bool m_CanReceivePoints;
+
 private:
 	std::vector<CSnapEntities> m_vSnapEntities;
 	void SnapCollectEntities();
@@ -867,6 +965,8 @@ private:
 	void DetectStrongHook();
 
 	vec2 GetSmoothPos(int ClientId);
+
+	vec2 GetFreezePos(int ClientId);
 
 	int m_PredictedDummyId;
 	int m_IsDummySwapping;

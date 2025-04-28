@@ -23,6 +23,19 @@
 
 using namespace std::chrono_literals;
 
+// TClient
+static void ReplaceHyphensWithSpaces(char *Str)
+{
+	if(Str == nullptr)
+		return;
+	while(*Str)
+	{
+		if(*Str == '-')
+			*Str = ' ';
+		Str++;
+	}
+}
+
 enum
 {
 	FONT_NAME_SIZE = 128,
@@ -351,6 +364,16 @@ private:
 			{
 				FamilyNameMatch = CurrentFace;
 			}
+
+			// TClient
+			// Third best match: match the fucking font name
+			char aBuf[256];
+			str_copy(aBuf, FT_Get_Postscript_Name(CurrentFace));
+			ReplaceHyphensWithSpaces(aBuf);
+			if(!FamilyNameMatch && str_comp(pFamilyName, aBuf) == 0)
+			{
+				FamilyNameMatch = CurrentFace;
+			}
 		}
 
 		return FamilyNameMatch;
@@ -603,6 +626,8 @@ public:
 			delete[] pTextureData;
 		}
 	}
+	// TClient
+	std::vector<FT_Face> *GetFaces() { return &m_vFtFaces; }
 
 	FT_Face DefaultFace() const
 	{
@@ -959,6 +984,10 @@ class CTextRender : public IEngineTextRender
 
 	std::chrono::nanoseconds m_CursorRenderTime;
 
+	// TClient
+	std::vector<std::string> m_CustomFontFaces;
+	std::vector<std::string> m_DefaultFontFaces;
+
 	int GetFreeTextContainerIndex()
 	{
 		if(m_FirstFreeTextContainerIndex == -1)
@@ -1153,6 +1182,86 @@ public:
 		m_pGraphics = nullptr;
 		m_pStorage = nullptr;
 	}
+	// Fex
+	static int LaziestFileCallback(const char *pFilename, int IsDir, int StorageType, void *pUser)
+	{
+		std::vector<std::string> *pVector = static_cast<std::vector<std::string> *>(pUser);
+		if(IsDir)
+			return 0;
+		pVector->push_back(std::string(pFilename));
+		return 0;
+	}
+
+	// Fex
+	void CheckDefaultFaces()
+	{
+		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
+		{
+			char aBuf[256];
+			str_copy(aBuf, FT_Get_Postscript_Name(CurrentFace));
+			ReplaceHyphensWithSpaces(aBuf);
+			m_DefaultFontFaces.push_back(std::string(aBuf));
+		}
+	}
+	// Fex
+	void UpdateCustomFontList()
+	{
+		std::vector<std::string> m_AllFaces;
+		for(const auto &CurrentFace : *m_pGlyphMap->GetFaces())
+		{
+			char aBuf[256];
+			str_copy(aBuf, FT_Get_Postscript_Name(CurrentFace));
+			ReplaceHyphensWithSpaces(aBuf);
+			m_AllFaces.push_back(std::string(aBuf));
+		}
+
+		m_CustomFontFaces.clear();
+		m_CustomFontFaces.push_back(std::string("DejaVu Sans"));
+		for(const auto &face : m_AllFaces)
+			if(std::find(m_DefaultFontFaces.begin(), m_DefaultFontFaces.end(), face) == m_DefaultFontFaces.end())
+				m_CustomFontFaces.push_back(face);
+	}
+	// Fex
+	void LoadCustomFonts()
+	{
+		CheckDefaultFaces();
+		std::vector<std::string> vCustomFonts;
+		Storage()->ListDirectory(IStorage::TYPE_ALL, "fex/fonts", LaziestFileCallback, &vCustomFonts);
+		std::sort(vCustomFonts.begin(), vCustomFonts.end());
+		for(std::string sFile : vCustomFonts)
+		{
+			char aFontName[IO_MAX_PATH_LENGTH];
+			str_format(aFontName, sizeof(aFontName), "fex/fonts/%s", sFile.c_str());
+			void *pFontData;
+			unsigned FontDataSize;
+			if(Storage()->ReadFile(aFontName, IStorage::TYPE_ALL, &pFontData, &FontDataSize))
+			{
+				if(LoadFontCollection(aFontName, static_cast<FT_Byte *>(pFontData), (FT_Long)FontDataSize))
+				{
+					m_vpFontData.push_back(pFontData);
+				}
+				else
+				{
+					free(pFontData);
+				}
+			}
+			else
+			{
+				log_error("textrender", "Failed to open/read font file '%s'", aFontName);
+			}
+		}
+		UpdateCustomFontList();
+	}
+	// Fex
+	std::vector<std::string> *GetCustomFaces() override
+	{
+		return &m_CustomFontFaces;
+	}
+	// Fex
+	void SetCustomFace(const char *pFace) override
+	{
+		m_pGlyphMap->SetDefaultFaceByName(pFace);
+	}
 
 	bool LoadFonts() override
 	{
@@ -1239,6 +1348,9 @@ public:
 			log_error("textrender", "Font index malformed: 'default' must be a string");
 			Success = false;
 		}
+		// TClient
+		LoadCustomFonts();
+		m_pGlyphMap->AddFallbackFaceByName("DejaVu Sans");
 
 		// extract language variant family names
 		const json_value &Variants = (*pJsonData)["language variants"];
@@ -1580,7 +1692,7 @@ public:
 		const unsigned RenderFlags = TextContainer.m_RenderFlags;
 
 		float DrawX = 0.0f, DrawY = 0.0f;
-		if((RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT) != 0)
+		if((RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) != 0)
 		{
 			DrawX = pCursor->m_X;
 			DrawY = pCursor->m_Y;
@@ -1653,7 +1765,7 @@ public:
 
 			DrawX = pCursor->m_StartX;
 			DrawY += pCursor->m_AlignedFontSize + pCursor->m_AlignedLineSpacing;
-			if((RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT) == 0)
+			if((RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
 			{
 				DrawX = round_to_int(DrawX * FakeToScreen.x) / FakeToScreen.x; // realign
 				DrawY = round_to_int(DrawY * FakeToScreen.y) / FakeToScreen.y;
@@ -2225,7 +2337,7 @@ public:
 		float ScreenX0, ScreenY0, ScreenX1, ScreenY1;
 		Graphics()->GetScreen(&ScreenX0, &ScreenY0, &ScreenX1, &ScreenY1);
 
-		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT) == 0)
+		if((TextContainer.m_RenderFlags & TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT) == 0)
 		{
 			const vec2 FakeToScreen = vec2(Graphics()->ScreenWidth() / (ScreenX1 - ScreenX0), Graphics()->ScreenHeight() / (ScreenY1 - ScreenY0));
 			const float AlignedX = round_to_int((TextContainer.m_X + X) * FakeToScreen.x) / FakeToScreen.x;

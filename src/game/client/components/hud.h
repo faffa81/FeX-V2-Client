@@ -64,11 +64,13 @@ class CHud : public CComponent
 	STextContainerIndex m_aPlayerPositionContainers[2];
 	char m_aaPlayerPositionText[2][128];
 
+
 	void RenderCursor();
 
 	void RenderTextInfo();
 	void RenderConnectionWarning();
 	void RenderTeambalanceWarning();
+	void RenderSpectatorChallengeOverlay();
 	void RenderVoting();
 
 	void PrepareAmmoHealthAndArmorQuads();
@@ -76,6 +78,8 @@ class CHud : public CComponent
 
 	void PreparePlayerStateQuads();
 	void RenderPlayerState(const int ClientId);
+
+	void RenderQuickActions(const int ClientId);
 
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();
@@ -106,8 +110,11 @@ public:
 	virtual void OnWindowResize() override;
 	virtual void OnReset() override;
 	virtual void OnRender() override;
+	virtual bool OnInput(const IInput::CEvent &Event) override;
 	virtual void OnInit() override;
+	void Render1v1Hud();
 	virtual void OnNewSnapshot() override;
+
 
 	// DDRace
 
@@ -125,6 +132,11 @@ private:
 	int m_FinishTimeLastReceivedTick;
 	int m_TimeCpLastReceivedTick;
 	bool m_ShowFinishTime;
+
+	int m_1v1Points;
+    int m_1v1EnemyPoints;
+    char m_1v1OpponentName[64];
+    bool m_In1v1;
 
 	inline float GetMovementInformationBoxHeight();
 	inline int GetDigitsIndex(int Value, int Max);
@@ -161,6 +173,13 @@ private:
 	int m_PracticeModeOffset;
 	int m_Team0ModeOffset;
 	int m_LockModeOffset;
+
+	bool m_WKeyPressed;
+    bool m_AKeyPressed;
+    bool m_DKeyPressed;
+    bool m_SKeyPressed;
+	int m_LastPressedTick;
+    static bool s_ShowClanPage;
 };
 
 #endif

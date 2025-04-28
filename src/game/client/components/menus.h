@@ -28,8 +28,12 @@
 #include <game/client/render.h>
 #include <game/client/ui.h>
 #include <game/voting.h>
+#include <game/localization.h>
 
 #include <game/client/components/skins7.h>
+#include <engine/shared/localization.h>
+
+#include "fex/fexwarlist.h"
 
 struct CServerProcess
 {
@@ -448,6 +452,8 @@ protected:
 	std::vector<CFriendItem> m_avFriends[NUM_FRIEND_TYPES];
 	const CFriendItem *m_pRemoveFriend = nullptr;
 
+
+
 	// found in menus.cpp
 	void Render();
 	void RenderPopupFullscreen(CUIRect Screen);
@@ -530,8 +536,11 @@ protected:
 	void RenderServerbrowserInfo(CUIRect View);
 	void RenderServerbrowserInfoScoreboard(CUIRect View, const CServerInfo *pSelectedServer);
 	void RenderServerbrowserFriends(CUIRect View);
+	void RenderServerbrowserWars(CUIRect View);
+	void RenderWarListAddSection(CUIRect View);
 	void FriendlistOnUpdate();
 	void PopupConfirmRemoveFriend();
+	void PopupConfirmRemoveWar();
 	void RenderServerbrowserTabBar(CUIRect TabBar);
 	void RenderServerbrowserToolBox(CUIRect ToolBox);
 	void RenderServerbrowser(CUIRect MainView);
@@ -727,6 +736,8 @@ public:
 		SETTINGS_SOUND,
 		SETTINGS_DDNET,
 		SETTINGS_ASSETS,
+		SETTINGS_FEX,
+		SETTINGS_SKINPROFILES,
 
 		SETTINGS_LENGTH,
 
@@ -752,6 +763,7 @@ public:
 		SMALL_TAB_BROWSER_FILTER,
 		SMALL_TAB_BROWSER_INFO,
 		SMALL_TAB_BROWSER_FRIENDS,
+		SMALL_TAB_BROWSER_WARS,
 
 		SMALL_TAB_LENGTH,
 	};
@@ -855,6 +867,25 @@ private:
 	void RenderSettingsDDNet(CUIRect MainView);
 	void RenderSettingsAppearance(CUIRect MainView);
 	bool RenderHslaScrollbars(CUIRect *pRect, unsigned int *pColor, bool Alpha, float DarkestLight);
+public:
+
+	void RenderSettingsFeX(CUIRect MainView);
+	void RenderSettingsProfiles(CUIRect MainView);
+	void RenderChatPreview(CUIRect MainView);
+	void RenderSettingsWarList(CUIRect MainView);
+	const CWarType *m_pRemoveWarType = nullptr;
+	void PopupConfirmRemoveWarType();
+	int DoButtonLineSize_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, float LineSize, bool Fake = false, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = 5.0f, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
+	void RenderDevSkin(vec2 RenderPos, float Size, const char *pSkinName, const char *pBackupSkin, bool CustomColors, int FeetColor, int BodyColor, int Emote, bool Rainbow,
+		ColorRGBA ColorFeet = ColorRGBA(0, 0, 0, 0), ColorRGBA ColorBody = ColorRGBA(0, 0, 0, 0));
+	void RenderFontIcon(const CUIRect Rect, const char *pText, float Size, int Align);
+	int DoButtonNoRect_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners = IGraphics::CORNER_ALL);
+
+	bool DoSliderWithScaledValue(const void *pId, int *pOption, const CUIRect *pRect, const char *pStr, int Min, int Max, int Scale, const IScrollbarScale *pScale, unsigned Flags = 0u, const char *pSuffix = "");
+
+	void RenderSettingsStatusBar(CUIRect MainView);
+
+	void RenderSettingsBindWheel(CUIRect MainView);
 
 	CServerProcess m_ServerProcess;
 };

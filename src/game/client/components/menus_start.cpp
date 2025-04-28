@@ -20,8 +20,10 @@
 #if defined(CONF_PLATFORM_ANDROID)
 #include <android/android_main.h>
 #endif
+#include "fex/fexversion.h"
 
 using namespace FontIcons;
+
 
 void CMenus::RenderStartMenu(CUIRect MainView)
 {
@@ -175,13 +177,19 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 
 	// render version
-	CUIRect CurVersion, ConsoleButton;
+	CUIRect CurVersion, ConsoleButton, FEXVersion;
 	MainView.HSplitBottom(45.0f, nullptr, &CurVersion);
-	CurVersion.VSplitRight(40.0f, &CurVersion, nullptr);
-	CurVersion.HSplitTop(20.0f, &ConsoleButton, &CurVersion);
+	CurVersion.VSplitRight(40.0f, &CurVersion, &FEXVersion);
+	FEXVersion.HSplitTop(20.0f, &ConsoleButton, &FEXVersion);
+	FEXVersion.HSplitTop(5.0f, &CurVersion, &FEXVersion);
 	CurVersion.HSplitTop(5.0f, nullptr, &CurVersion);
 	ConsoleButton.VSplitRight(40.0f, nullptr, &ConsoleButton);
-	Ui()->DoLabel(&CurVersion, GAME_RELEASE_VERSION, 14.0f, TEXTALIGN_MR);
+	char DDNETRL[128];
+	char FEXRL[128];
+	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s: %s"), GAME_NAME, GAME_RELEASE_VERSION);
+	str_format(FEXRL, sizeof(FEXRL), Localize("%s: %s"), CLIENT_NAME, FEX_RELEASE_VERSION);
+	Ui()->DoLabel(&CurVersion, DDNETRL, 20.0f, TEXTALIGN_MR);
+	Ui()->DoLabel(&FEXVersion, FEXRL, 17.0f, TEXTALIGN_MR);
 
 	static CButtonContainer s_ConsoleButton;
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);

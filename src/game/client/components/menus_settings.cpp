@@ -38,6 +38,8 @@
 #include <numeric>
 #include <string>
 #include <vector>
+#include "fex/fex.h"
+#include "fex/fexskinprofiles.h"
 
 using namespace FontIcons;
 using namespace std::chrono_literals;
@@ -930,6 +932,11 @@ static CKeyInfo gs_aKeys[] =
 		{Localizable("Lock team"), "say /lock", 0, 0},
 		{Localizable("Show entities"), "toggle cl_overlay_entities 0 100", 0, 0},
 		{Localizable("Show HUD"), "toggle cl_showhud 0 1", 0, 0},
+
+		{Localizable("Add player score"), "+player_score", 0, 0},
+		{Localizable("Add enemy score"), "+enemy_score", 0, 0},
+		{Localizable("Draw score"), "draw_score", 0, 0},
+		{Localizable("Remove last score"), "remove_score", 0, 0},
 };
 
 void CMenus::DoSettingsControlsButtons(int Start, int Stop, CUIRect View)
@@ -1194,7 +1201,7 @@ void CMenus::RenderSettingsControls(CUIRect MainView)
 	const float Margin = 10.0f;
 	const float HeaderHeight = FontSize + 5.0f + Margin;
 
-	CUIRect MouseSettings, MovementSettings, WeaponSettings, VotingSettings, ChatSettings, DummySettings, MiscSettings, JoystickSettings, ResetButton, Button;
+	CUIRect MouseSettings, MovementSettings, WeaponSettings, VotingSettings, ChatSettings, DummySettings, MiscSettings, JoystickSettings, ResetButton, Button, Fex1v1Controls;
 	MainView.VSplitMid(&MouseSettings, &VotingSettings);
 
 	// mouse settings
@@ -1335,7 +1342,7 @@ void CMenus::RenderSettingsControls(CUIRect MainView)
 	// misc settings
 	{
 		MiscSettings.HSplitTop(Margin, nullptr, &MiscSettings);
-		MiscSettings.HSplitTop(300.0f, &MiscSettings, nullptr);
+		MiscSettings.HSplitTop(300.0f, &MiscSettings, &Fex1v1Controls);
 		if(s_ScrollRegion.AddRect(MiscSettings))
 		{
 			MiscSettings.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_ALL, 10.0f);
@@ -1345,6 +1352,23 @@ void CMenus::RenderSettingsControls(CUIRect MainView)
 			Ui()->DoLabel(&Button, Localize("Miscellaneous"), FontSize, TEXTALIGN_ML);
 
 			DoSettingsControlsButtons(32, 44, MiscSettings);
+		}
+	}
+
+	// Fex1v1
+	{
+		Fex1v1Controls.HSplitTop(Margin, nullptr, &Fex1v1Controls);
+		Fex1v1Controls.HSplitTop(170.0f, &Fex1v1Controls, &MiscSettings);
+		if(s_ScrollRegion.AddRect(Fex1v1Controls))
+		{
+			Fex1v1Controls.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_ALL, 10.0f);
+			Fex1v1Controls.VMargin(Margin, &Fex1v1Controls);
+		
+			Fex1v1Controls.HSplitTop(HeaderHeight, &Button, &Fex1v1Controls);
+			Ui()->DoLabel(&Button, Localize("1v1 Mode"), FontSize, TEXTALIGN_ML);
+		
+			// Key bindings for 1v1 mode (indices 44-46)
+			DoSettingsControlsButtons(44, 48, Fex1v1Controls);
 		}
 	}
 
@@ -1978,7 +2002,9 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("Graphics"),
 		Localize("Sound"),
 		Localize("DDNet"),
-		Localize("Assets")};
+		Localize("Assets"),
+		("FeX"),
+		("Profiles")};
 	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
 
 	for(int i = 0; i < SETTINGS_LENGTH; i++)
@@ -2041,6 +2067,16 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
 		RenderSettingsCustom(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_FEX)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
+		RenderSettingsFeX(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_SKINPROFILES)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_SKINPROFILES);
+		RenderSettingsProfiles(MainView);
 	}
 	else
 	{

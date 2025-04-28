@@ -28,11 +28,11 @@ class CVoting : public CComponent
 
 	void RemoveOption(const char *pDescription);
 	void ClearOptions();
-	void Callvote(const char *pType, const char *pValue, const char *pReason);
 
 	void RenderBars(CUIRect Bars) const;
 
 public:
+	void Callvote(const char *pType, const char *pValue, const char *pReason);
 	int m_NumVoteOptions;
 	CVoteOptionClient *m_pFirst;
 	CVoteOptionClient *m_pLast;

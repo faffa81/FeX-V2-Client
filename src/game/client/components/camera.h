@@ -92,6 +92,8 @@ public:
 	virtual void OnConsoleInit() override;
 	virtual void OnReset() override;
 
+	bool GetCharacterPosition(int ClientID, vec2& Position) const;
+
 	void SetView(ivec2 Pos, bool Relative = false);
 	void GotoSwitch(int Number, int Offset = -1);
 	void GotoTele(int Number, int Offset = -1);

@@ -15,6 +15,8 @@
 #include <game/client/skin.h>
 #include <game/generated/protocol7.h>
 
+#include "fex/fexbindchat.h"
+
 constexpr auto SAVES_FILE = "ddnet-saves.txt";
 
 class CChat : public CComponent
@@ -42,6 +44,14 @@ class CChat : public CComponent
 		char m_aName[64];
 		char m_aText[MAX_LINE_LENGTH];
 		bool m_Friend;
+		bool m_Paused;
+
+		bool m_IsWar;
+		bool m_IsHelper;
+		bool m_IsTeam;
+		bool m_IsMute;
+		bool m_IsAnyList;
+
 		bool m_Highlighted;
 		std::optional<ColorRGBA> m_CustomColor;
 
@@ -70,6 +80,7 @@ class CChat : public CComponent
 		MODE_NONE = 0,
 		MODE_ALL,
 		MODE_TEAM,
+		MODE_SILENT,
 
 		CHAT_SERVER = 0,
 		CHAT_HIGHLIGHT,
@@ -112,6 +123,20 @@ class CChat : public CComponent
 		bool operator==(const CCommand &Other) const { return str_comp(m_aName, Other.m_aName) == 0; }
 	};
 
+	struct SOriginalPlayerData
+	{
+		char m_aOriginalName[MAX_NAME_LENGTH];
+		char m_aOriginalClan[MAX_CLAN_LENGTH];
+		char m_aOriginalSkin[MAX_SKIN_LENGTH];
+		int m_OriginalUseCustomColor;
+		int m_OriginalColorBody;
+		int m_OriginalColorFeet;
+		bool m_HasClone = false;
+	};
+
+	SOriginalPlayerData m_OriginalData; // Store original data
+
+
 	std::vector<CCommand> m_vCommands;
 	bool m_CommandsNeedSorting;
 
@@ -145,11 +170,43 @@ class CChat : public CComponent
 	bool LineShouldHighlight(const char *pLine, const char *pName);
 	void StoreSave(const char *pText);
 
+	friend class CBindchat;
+
 public:
+	struct CLastPing
+	{
+		void Reset()
+		{
+			m_aName[0] = '\0';
+			m_aClan[0] = '\0';
+			m_aMessage[0] = '\0';
+			m_ReciveTime = 0;
+			m_Team = 0;
+		}
+
+		CLastPing()
+		{
+			Reset();
+		}
+
+		char m_aName[32];
+		char m_aClan[32];
+		char m_aMessage[2048];
+		int m_Team;
+		int64_t m_ReciveTime;
+	};
 	CChat();
+	bool IsCommandPrefix(const char *pStr);
 	int Sizeof() const override { return sizeof(*this); }
 
 	static constexpr float MESSAGE_TEE_PADDING_RIGHT = 0.5f;
+
+	enum
+	{
+		PING_QUEUE_SIZE = 16
+	};
+
+	CLastPing m_aLastPings[PING_QUEUE_SIZE];
 
 	bool IsActive() const { return m_Mode != MODE_NONE; }
 	void AddLine(int ClientId, int Team, const char *pLine);
@@ -158,6 +215,8 @@ public:
 	void RegisterCommand(const char *pName, const char *pParams, const char *pHelpText);
 	void UnregisterCommand(const char *pName);
 	void Echo(const char *pString);
+	void InitFexCommands();
+
 
 	void OnWindowResize() override;
 	void OnConsoleInit() override;
@@ -182,6 +241,17 @@ public:
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
 	float MessageRounding() const { return FontSize() * (1 / 2.f); }
 
+	// fex
+
+	void ChatDetection(int ClientId, int Team, const char *pLine);
+
+	bool ReturnChat;
+	int m_AdBotId;
+	int64_t m_VoteKickTimer;
+
+	bool m_AttempedJoinTeam;
+	bool m_JoinedTeam;
+
 	// ----- send functions -----
 
 	// Sends a chat message to the server.
@@ -198,5 +268,7 @@ public:
 	//
 	// It uses team or public chat depending on m_Mode.
 	void SendChatQueued(const char *pLine);
+	void OnChatMessage(int ClientId, int Team, const char *pMsg);
+	int Get128Name(const char *pMsg, char *pName);
 };
 #endif

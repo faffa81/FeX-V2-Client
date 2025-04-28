@@ -168,8 +168,8 @@ if(NOT "${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/src/game/version.h)
 endif()
 
-set(SERVER_EXECUTABLE DDNet-Server CACHE STRING "Name of the built server executable")
-set(CLIENT_EXECUTABLE DDNet CACHE STRING "Name of the build client executable")
+set(SERVER_EXECUTABLE FeX-Server CACHE STRING "Name of the built server executable")
+set(CLIENT_EXECUTABLE FeX CACHE STRING "Name of the build client executable")
 
 ########################################################################
 # Compiler flags
@@ -1434,6 +1434,18 @@ set(EXPECTED_DATA
   editor/tune.png
   emoticons.png
   extras.png
+  fex/binds/extra.cfg
+  fex/binds/help.cfg
+  fex/fonts/Cabin-Regular.ttf
+  fex/fonts/ComicSansMS.ttf
+  fex/fonts/GoogleSans-Regular.ttf
+  fex/fonts/Inter_24pt-Regular.ttf
+  fex/fonts/Inter_24pt-SemiBold.ttf
+  fex/fonts/Minecraft_font.ttf
+  fex/fonts/Montserrat-Regular.ttf
+  fex/fonts/Nunito-Black.ttf
+  fex/fonts/Rubik-Regular.ttf
+  fex/icons/muted_icon.png
   fonts/DejaVuSans.ttf
   fonts/Font_Awesome_6_Free-Solid-900.otf
   fonts/GlowSansJ-Compressed-Book.otf
@@ -2074,6 +2086,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   econ.cpp
   econ.h
   engine.cpp
+  fex_variables.h
   fifo.cpp
   fifo.h
   filecollection.cpp
@@ -2352,6 +2365,36 @@ if(CLIENT)
     components/effects.h
     components/emoticon.cpp
     components/emoticon.h
+
+    ### FeX Client ###
+    components/fex/fex.cpp
+    components/fex/fex.h
+    components/fex/fexbindchat.cpp
+    components/fex/fexbindchat.h
+    components/fex/fexbindwheel.cpp
+    components/fex/fexbindwheel.h
+    # components/fex/fexdiscord.cpp
+    components/fex/fexfreezekill.cpp
+    components/fex/fexfreezekill.h
+    components/fex/fexoutlines.cpp
+    components/fex/fexoutlines.h
+    components/fex/fexplayerindicator.cpp
+    components/fex/fexplayerindicator.h
+    components/fex/fexskinprofiles.cpp
+    components/fex/fexskinprofiles.h
+    components/fex/fexstatusbar.cpp
+    components/fex/fexstatusbar.h
+    components/fex/fextrails.cpp
+    components/fex/fextrails.h
+    components/fex/fexversion.h
+    components/fex/fexvisual.cpp
+    components/fex/fexvisual.h
+    components/fex/fexwarlist.cpp
+    components/fex/fexwarlist.h
+    components/fex/fx_enums.h
+    components/fex/menus_fex.cpp
+    ### DDNet Client ###
+
     components/flow.cpp
     components/flow.h
     components/freezebars.cpp

@@ -1,0 +1,5 @@
+enum
+{
+	TEAM_SILENT = -4,
+	TEAM_MESSAGE,
+};

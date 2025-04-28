@@ -664,3 +664,16 @@ void CCamera::UpdateAutoSpecCameraTooltip()
 	else
 		str_format(m_aAutoSpecCameraTooltip, sizeof(m_aAutoSpecCameraTooltip), "%s: %s", pFeatureText, Localize("Active", "Auto camera"));
 }
+
+bool CCamera::GetCharacterPosition(int ClientID, vec2& Position) const 
+{
+    if(ClientID < 0 || ClientID >= MAX_CLIENTS)
+        return false;
+
+    if(!m_pClient->m_Snap.m_aCharacters[ClientID].m_Active)
+        return false;
+
+    Position = vec2(m_pClient->m_Snap.m_aCharacters[ClientID].m_Cur.m_X,
+                   m_pClient->m_Snap.m_aCharacters[ClientID].m_Cur.m_Y);
+    return true;
+}

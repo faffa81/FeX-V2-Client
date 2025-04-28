@@ -93,6 +93,7 @@ public:
 	int m_FriendState;
 	int m_FriendNum;
 
+
 	int m_MaxClients;
 	int m_NumClients;
 	int m_MaxPlayers;
