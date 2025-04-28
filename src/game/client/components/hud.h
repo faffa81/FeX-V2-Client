@@ -43,7 +43,6 @@ struct SScoreInfo
 class CHud : public CComponent
 {
 	float m_Width, m_Height;
-	float m_FrameTimeAvg;
 
 	int m_HudQuadContainerIndex;
 	SScoreInfo m_aScoreInfo[2];
@@ -70,14 +69,17 @@ class CHud : public CComponent
 	void RenderTextInfo();
 	void RenderConnectionWarning();
 	void RenderTeambalanceWarning();
+<<<<<<< HEAD
 	void RenderSpectatorChallengeOverlay();
 	void RenderVoting();
+=======
+>>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 
 	void PrepareAmmoHealthAndArmorQuads();
 	void RenderAmmoHealthAndArmor(const CNetObj_Character *pCharacter);
 
 	void PreparePlayerStateQuads();
-	void RenderPlayerState(const int ClientId);
+	void RenderPlayerState(int ClientId);
 
 	void RenderQuickActions(const int ClientId);
 
@@ -119,7 +121,7 @@ public:
 	// DDRace
 
 	virtual void OnMessage(int MsgType, void *pRawMsg) override;
-	void RenderNinjaBarPos(float x, const float y, const float Width, const float Height, float Progress, float Alpha = 1.0f);
+	void RenderNinjaBarPos(float x, float y, float Width, float Height, float Progress, float Alpha = 1.0f);
 
 private:
 	void RenderRecord();

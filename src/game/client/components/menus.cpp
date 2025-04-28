@@ -27,6 +27,7 @@
 
 #include <engine/client/updater.h>
 
+#include <game/client/animstate.h>
 #include <game/client/components/binds.h>
 #include <game/client/components/console.h>
 #include <game/client/components/menu_background.h>
@@ -262,7 +263,7 @@ int CMenus::DoButton_Favorite(const void *pButtonId, const void *pParentId, bool
 	if(Checked || (pParentId != nullptr && Ui()->HotItem() == pParentId) || Ui()->HotItem() == pButtonId)
 	{
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		const float Alpha = Ui()->HotItem() == pButtonId ? 0.2f : 0.0f;
 		TextRender()->TextColor(Checked ? ColorRGBA(1.0f, 0.85f, 0.3f, 0.8f + Alpha) : ColorRGBA(0.5f, 0.5f, 0.5f, 0.8f + Alpha));
 		SLabelProperties Props;
@@ -287,7 +288,7 @@ int CMenus::DoButton_CheckBox_Common(const void *pId, const char *pText, const c
 	const bool Checkable = *pBoxText == 'X';
 	if(Checkable)
 	{
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		Ui()->DoLabel(&Box, FONT_ICON_XMARK, Box.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -303,44 +304,16 @@ int CMenus::DoButton_CheckBox_Common(const void *pId, const char *pText, const c
 
 void CMenus::DoLaserPreview(const CUIRect *pRect, const ColorHSLA LaserOutlineColor, const ColorHSLA LaserInnerColor, const int LaserType)
 {
-	ColorRGBA LaserRGB;
 	CUIRect Section = *pRect;
-	vec2 From = vec2(Section.x + 50.0f, Section.y + Section.h / 2.0f);
-	vec2 Pos = vec2(Section.x + Section.w - 10.0f, Section.y + Section.h / 2.0f);
+	vec2 From = vec2(Section.x + 30.0f, Section.y + Section.h / 2.0f);
+	vec2 Pos = vec2(Section.x + Section.w - 20.0f, Section.y + Section.h / 2.0f);
 
-	Graphics()->BlendNormal();
-	Graphics()->TextureClear();
-	Graphics()->QuadsBegin();
+	const ColorRGBA OuterColor = color_cast<ColorRGBA>(ColorHSLA(LaserOutlineColor));
+	const ColorRGBA InnerColor = color_cast<ColorRGBA>(ColorHSLA(LaserInnerColor));
+	const float TicksHead = Client()->GlobalTime() * Client()->GameTickSpeed();
 
-	LaserRGB = color_cast<ColorRGBA, ColorHSLA>(LaserOutlineColor);
-	ColorRGBA OuterColor(LaserRGB.r, LaserRGB.g, LaserRGB.b, 1.0f);
-	Graphics()->SetColor(LaserRGB.r, LaserRGB.g, LaserRGB.b, 1.0f);
-	vec2 Out = vec2(0.0f, -1.0f) * (3.15f);
-
-	IGraphics::CFreeformItem Freeform(From.x - Out.x, From.y - Out.y, From.x + Out.x, From.y + Out.y, Pos.x - Out.x, Pos.y - Out.y, Pos.x + Out.x, Pos.y + Out.y);
-	Graphics()->QuadsDrawFreeform(&Freeform, 1);
-
-	LaserRGB = color_cast<ColorRGBA, ColorHSLA>(LaserInnerColor);
-	ColorRGBA InnerColor(LaserRGB.r, LaserRGB.g, LaserRGB.b, 1.0f);
-	Out = vec2(0.0f, -1.0f) * (2.25f);
-	Graphics()->SetColor(InnerColor.r, InnerColor.g, InnerColor.b, 1.0f);
-
-	Freeform = IGraphics::CFreeformItem(From.x - Out.x, From.y - Out.y, From.x + Out.x, From.y + Out.y, Pos.x - Out.x, Pos.y - Out.y, Pos.x + Out.x, Pos.y + Out.y);
-	Graphics()->QuadsDrawFreeform(&Freeform, 1);
-	Graphics()->QuadsEnd();
-
-	Graphics()->BlendNormal();
-	int SpriteIndex = time_get() % 3;
-	Graphics()->TextureSet(GameClient()->m_ParticlesSkin.m_aSpriteParticleSplat[SpriteIndex]);
-	Graphics()->QuadsBegin();
-	Graphics()->QuadsSetRotation(time_get());
-	Graphics()->SetColor(OuterColor.r, OuterColor.g, OuterColor.b, 1.0f);
-	IGraphics::CQuadItem QuadItem(Pos.x, Pos.y, 24, 24);
-	Graphics()->QuadsDraw(&QuadItem, 1);
-	Graphics()->SetColor(InnerColor.r, InnerColor.g, InnerColor.b, 1.0f);
-	QuadItem = IGraphics::CQuadItem(Pos.x, Pos.y, 20, 20);
-	Graphics()->QuadsDraw(&QuadItem, 1);
-	Graphics()->QuadsEnd();
+	// TicksBody = 4.0 for less laser width for weapon alignment
+	GameClient()->m_Items.RenderLaser(From, Pos, OuterColor, InnerColor, 4.0f, TicksHead, LaserType);
 
 	switch(LaserType)
 	{
@@ -360,15 +333,32 @@ void CMenus::DoLaserPreview(const CUIRect *pRect, const ColorHSLA LaserOutlineCo
 		RenderTools()->DrawSprite(Section.x + 30.0f, Section.y + Section.h / 2.0f, 60.0f);
 		Graphics()->QuadsEnd();
 		break;
+	case LASERTYPE_DRAGGER:
+	{
+		CTeeRenderInfo TeeRenderInfo;
+		TeeRenderInfo.Apply(m_pClient->m_Skins.Find(g_Config.m_ClPlayerSkin));
+		TeeRenderInfo.ApplyColors(g_Config.m_ClPlayerUseCustomColor, g_Config.m_ClPlayerColorBody, g_Config.m_ClPlayerColorFeet);
+		TeeRenderInfo.m_Size = 64.0f;
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeRenderInfo, EMOTE_NORMAL, vec2(-1, 0), Pos);
+		break;
+	}
+	case LASERTYPE_FREEZE:
+	{
+		CTeeRenderInfo TeeRenderInfo;
+		if(g_Config.m_ClShowNinja)
+			TeeRenderInfo.Apply(m_pClient->m_Skins.Find("x_ninja"));
+		else
+			TeeRenderInfo.Apply(m_pClient->m_Skins.Find(g_Config.m_ClPlayerSkin));
+		TeeRenderInfo.m_TeeRenderFlags = TEE_EFFECT_FROZEN;
+		TeeRenderInfo.m_Size = 64.0f;
+		TeeRenderInfo.m_ColorBody = ColorRGBA(1, 1, 1);
+		TeeRenderInfo.m_ColorFeet = ColorRGBA(1, 1, 1);
+		RenderTools()->RenderTee(CAnimState::GetIdle(), &TeeRenderInfo, EMOTE_PAIN, vec2(1, 0), From);
+		GameClient()->m_Effects.FreezingFlakes(From, vec2(32, 32));
+		break;
+	}
 	default:
-		Graphics()->QuadsBegin();
-		Graphics()->SetColor(OuterColor.r, OuterColor.g, OuterColor.b, 1.0f);
-		QuadItem = IGraphics::CQuadItem(From.x, From.y, 24, 24);
-		Graphics()->QuadsDraw(&QuadItem, 1);
-		Graphics()->SetColor(InnerColor.r, InnerColor.g, InnerColor.b, 1.0f);
-		QuadItem = IGraphics::CQuadItem(From.x, From.y, 20, 20);
-		Graphics()->QuadsDraw(&QuadItem, 1);
-		Graphics()->QuadsEnd();
+		GameClient()->m_Items.RenderLaser(From, From, OuterColor, InnerColor, 4.0f, TicksHead, LaserType);
 	}
 }
 
@@ -573,7 +563,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	// First render buttons aligned from right side so remaining
 	// width is known when rendering buttons from left side.
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
 
 
@@ -633,7 +623,7 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 		Box.VSplitLeft(33.0f, &Button, &Box);
 
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
 		bool GotNewsOrUpdate = false;
 
@@ -963,13 +953,6 @@ void CMenus::OnInit()
 	m_DirectionQuadContainerIndex = Graphics()->CreateQuadContainer(false);
 	RenderTools()->QuadContainerAddSprite(m_DirectionQuadContainerIndex, 0.f, 0.f, 22.f);
 	Graphics()->QuadContainerUpload(m_DirectionQuadContainerIndex);
-}
-
-void CMenus::OnConsoleInit()
-{
-	ConfigManager()->RegisterCallback(CMenus::ConfigSaveCallback, this);
-	Console()->Register("add_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_AddFavoriteSkin, this, "Add a skin as a favorite");
-	Console()->Register("remove_favorite_skin", "s[skin_name]", CFGFLAG_CLIENT, Con_RemFavoriteSkin, this, "Remove a skin from the favorites");
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -1590,7 +1573,11 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			if(!m_vpFilteredDemos[m_DemolistSelectedIndex]->m_IsDir && !str_endswith(aBufNew, ".demo"))
 				str_append(aBufNew, ".demo");
 
-			if(Storage()->FileExists(aBufNew, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
+			if(!str_valid_filename(m_DemoRenameInput.GetString()))
+			{
+				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENAME_DEMO);
+			}
+			else if(Storage()->FileExists(aBufNew, m_vpFilteredDemos[m_DemolistSelectedIndex]->m_StorageType))
 			{
 				PopupMessage(Localize("Error"), Localize("A demo with this name already exists"), Localize("Ok"), POPUP_RENAME_DEMO);
 			}
@@ -1649,7 +1636,12 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 			str_format(aVideoPath, sizeof(aVideoPath), "videos/%s", m_DemoRenderInput.GetString());
 			if(!str_endswith(aVideoPath, ".mp4"))
 				str_append(aVideoPath, ".mp4");
-			if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE))
+
+			if(!str_valid_filename(m_DemoRenderInput.GetString()))
+			{
+				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_RENDER_DEMO);
+			}
+			else if(Storage()->FolderExists(aVideoPath, IStorage::TYPE_SAVE))
 			{
 				PopupMessage(Localize("Error"), Localize("A folder with this name already exists"), Localize("Ok"), POPUP_RENDER_DEMO);
 			}
@@ -1866,20 +1858,22 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 		static CButtonContainer s_ButtonYes;
 		if(DoButton_Menu(&s_ButtonYes, Localize("Yes"), m_SkinNameInput.IsEmpty() ? 1 : 0, &Yes) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER))
 		{
-			if(m_SkinNameInput.GetLength())
+			if(!str_valid_filename(m_SkinNameInput.GetString()))
 			{
-				if(m_SkinNameInput.GetString()[0] != 'x' && m_SkinNameInput.GetString()[1] != '_')
-				{
-					if(m_pClient->m_Skins7.SaveSkinfile(m_SkinNameInput.GetString(), m_Dummy))
-					{
-						m_Popup = POPUP_NONE;
-						m_SkinList7LastRefreshTime = std::nullopt;
-					}
-					else
-						PopupMessage(Localize("Error"), Localize("Unable to save the skin"), Localize("Ok"), POPUP_SAVE_SKIN);
-				}
-				else
-					PopupMessage(Localize("Error"), Localize("Unable to save the skin with a reserved name"), Localize("Ok"), POPUP_SAVE_SKIN);
+				PopupMessage(Localize("Error"), Localize("This name cannot be used for files and folders"), Localize("Ok"), POPUP_SAVE_SKIN);
+			}
+			else if(CSkins7::IsSpecialSkin(m_SkinNameInput.GetString()))
+			{
+				PopupMessage(Localize("Error"), Localize("Unable to save the skin with a reserved name"), Localize("Ok"), POPUP_SAVE_SKIN);
+			}
+			else if(!m_pClient->m_Skins7.SaveSkinfile(m_SkinNameInput.GetString(), m_Dummy))
+			{
+				PopupMessage(Localize("Error"), Localize("Unable to save the skin"), Localize("Ok"), POPUP_SAVE_SKIN);
+			}
+			else
+			{
+				m_Popup = POPUP_NONE;
+				m_SkinList7LastRefreshTime = std::nullopt;
 			}
 		}
 

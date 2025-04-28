@@ -40,6 +40,7 @@ public:
 	CServer *m_pServer = nullptr;
 	std::unique_ptr<IKernel> m_pKernel;
 	CTestInfo m_TestInfo;
+	std::unique_ptr<IStorage> m_pStorage;
 
 	CGameContext *GameServer()
 	{
@@ -54,13 +55,13 @@ public:
 		m_pKernel = std::unique_ptr<IKernel>(IKernel::Create());
 		m_pKernel->RegisterInterface(m_pServer);
 
-		IEngine *pEngine = CreateTestEngine(GAME_NAME, 1);
+		IEngine *pEngine = CreateTestEngine(GAME_NAME);
 		m_pKernel->RegisterInterface(pEngine);
 
 		m_TestInfo.m_DeleteTestStorageFilesOnSuccess = true;
-		IStorage *pStorage = m_TestInfo.CreateTestStorage();
-		EXPECT_NE(pStorage, nullptr);
-		m_pKernel->RegisterInterface(pStorage);
+		m_pStorage = m_TestInfo.CreateTestStorage();
+		EXPECT_NE(m_pStorage, nullptr);
+		m_pKernel->RegisterInterface(m_pStorage.get(), false);
 
 		IConsole *pConsole = CreateConsole(CFGFLAG_SERVER | CFGFLAG_ECON).release();
 		m_pKernel->RegisterInterface(pConsole);

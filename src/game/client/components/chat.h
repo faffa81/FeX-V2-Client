@@ -12,7 +12,6 @@
 #include <game/client/component.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
-#include <game/client/skin.h>
 #include <game/generated/protocol7.h>
 
 #include "fex/fexbindchat.h"
@@ -96,10 +95,11 @@ class CChat : public CComponent
 	int m_PlaceholderOffset;
 	int m_PlaceholderLength;
 	static char ms_aDisplayText[MAX_LINE_LENGTH];
-	struct CRateablePlayer
+	class CRateablePlayer
 	{
-		int ClientId;
-		int Score;
+	public:
+		int m_ClientId;
+		int m_Score;
 	};
 	CRateablePlayer m_aPlayerCompletionList[MAX_CLIENTS];
 	int m_PlayerCompletionListLength;
@@ -123,6 +123,7 @@ class CChat : public CComponent
 		bool operator==(const CCommand &Other) const { return str_comp(m_aName, Other.m_aName) == 0; }
 	};
 
+<<<<<<< HEAD
 	struct SOriginalPlayerData
 	{
 		char m_aOriginalName[MAX_NAME_LENGTH];
@@ -139,6 +140,10 @@ class CChat : public CComponent
 
 	std::vector<CCommand> m_vCommands;
 	bool m_CommandsNeedSorting;
+=======
+	std::vector<CCommand> m_vServerCommands;
+	bool m_ServerCommandsNeedSorting;
+>>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 
 	struct CHistoryEntry
 	{
