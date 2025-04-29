@@ -661,7 +661,7 @@ void CGameClient::ConRemoveScore(IConsole::IResult *pResult, void *pUserData)
 
 	if(pClient->m_1v1LastScorePlayer == true)
 	{
-		if(pClient->m_1v1PlayerScore == -1)
+		if(pClient->m_1v1PlayerScore == 0)
 		{
 			pClient->m_1v1PlayerScore++;
 		}
@@ -670,7 +670,7 @@ void CGameClient::ConRemoveScore(IConsole::IResult *pResult, void *pUserData)
 	}
 	else if(pClient->m_1v1LastScorePlayer == false)
 	{
-		if(pClient->m_1v1EnemyScore == -1)
+		if(pClient->m_1v1EnemyScore == 0)
 		{
 			pClient->m_1v1EnemyScore++;
 		}
