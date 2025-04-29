@@ -1,10 +1,10 @@
 #ifndef FEX_VERSION_H
 #define FEX_VERSION_H
 #ifndef FEX_RELEASE_VERSION
-#define FEX_RELEASE_VERSION "5.0"
+#define FEX_RELEASE_VERSION "5.1"
 #endif
 
 
-#define FEX_VERSION_NUMBER 5000
+#define FEX_VERSION_NUMBER 5010
 #define CLIENT_NAME "FeX"
 #endif
