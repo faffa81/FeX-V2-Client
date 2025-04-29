@@ -69,11 +69,8 @@ class CHud : public CComponent
 	void RenderTextInfo();
 	void RenderConnectionWarning();
 	void RenderTeambalanceWarning();
-<<<<<<< HEAD
 	void RenderSpectatorChallengeOverlay();
 	void RenderVoting();
-=======
->>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 
 	void PrepareAmmoHealthAndArmorQuads();
 	void RenderAmmoHealthAndArmor(const CNetObj_Character *pCharacter);

@@ -24,7 +24,7 @@ void CWarList::OnConsoleInit()
 
 	Console()->Register("update_war_group", "i[group_index] s[name] i[color]", CFGFLAG_CLIENT, ConUpsertWarType, this, "Update or add a specific war group");
 	Console()->Register("add_war_entry", "s[group] s[name] s[clan] r[reason]", CFGFLAG_CLIENT, ConAddWarEntry, this, "Adds a specific war entry");
-	Console()->Register("add_mute", "s[name]", CFGFLAG_CLIENT, ConAddMuteEntry, this, "Remove a clan war entry"); // A-Client [Mutes]
+	Console()->Register("add_mute", "s[name]", CFGFLAG_CLIENT, ConAddMuteEntry, this, "Remove a clan war entry"); // E-Client [Mutes]
 
 	Console()->Register("war_name", "s[group] s[name] ?r[reason]", CFGFLAG_CLIENT, ConName, this, "Add a name war entry");
 	Console()->Register("war_clan", "s[group] s[clan] ?r[reason]", CFGFLAG_CLIENT, ConClan, this, "Add a clan war entry");
@@ -37,7 +37,7 @@ void CWarList::OnConsoleInit()
 	Console()->Register("remove_war_name_index", "i[group_index] s[name]", CFGFLAG_CLIENT, ConRemoveNameIndex, this, "Remove a clan war entry");
 	Console()->Register("remove_war_clan_index", "s[group_index] s[name]", CFGFLAG_CLIENT, ConRemoveClanIndex, this, "Remove a clan war entry");
 
-	// A-Client [Mutes]
+	// E-Client [Mutes]
 	Console()->Register("addmute", "s[name]", CFGFLAG_CLIENT, ConAddMute, this, "Remove a clan war entry");
 	Console()->Register("delmute", "s[name]", CFGFLAG_CLIENT, ConDelMute, this, "Removes a Muted Name");
 
@@ -141,7 +141,7 @@ void CWarList::ConUpsertWarType(IConsole::IResult *pResult, void *pUserData)
 	pThis->UpsertWarType(Index, pType, Color);
 }
 
-// A-Client [Mutes]
+// E-Client [Mutes]
 void CWarList::ConAddMuteEntry(IConsole::IResult *pResult, void *pUserData)
 {
 	const char *pName = pResult->GetString(0);
@@ -199,27 +199,14 @@ void CWarList::AddWarEntryInGame(int WarType, const char *pName, const char *pRe
 	{
 		str_copy(Entry.m_aName, pName);
 		str_format(aBuf, sizeof(aBuf), "added \"%s\" to '%s' list ", pName, pWarType->m_aWarName);
-		CTempEntry TempEntry(pName, pName, "");
 
-		auto it = std::find(GameClient()->m_Fex.m_TempEntries.begin(), GameClient()->m_Fex.m_TempEntries.end(), TempEntry);
-		if(it != GameClient()->m_Fex.m_TempEntries.end())
-		{
-			for(auto it2 = GameClient()->m_Fex.m_TempEntries.begin(); it2 != GameClient()->m_Fex.m_TempEntries.end();)
-			{
-				bool IsDuplicate = !str_comp(it2->m_aTempWar, pName) || !str_comp(it2->m_aTempHelper, pName);
-
-				if(IsDuplicate)
-					it2 = GameClient()->m_Fex.m_TempEntries.erase(it2);
-				else
-					++it2;
-			}
-		}
+		GameClient()->m_Fex.UnTempWar(pName, true);
+		GameClient()->m_Fex.UnTempHelper(pName, true);
 	}
 	if(!g_Config.m_ClWarListAllowDuplicates)
 		RemoveWarEntryDuplicates(Entry.m_aName, Entry.m_aClan);
 
 	GameClient()->aMessage(aBuf);
-
 
 	AddWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_aReason, Entry.m_pWarType->m_aWarName);
 	// if(str_comp(Entry.m_aClan, "") != 0 || str_comp(Entry.m_aName, "") != 0)
@@ -228,15 +215,15 @@ void CWarList::AddWarEntryInGame(int WarType, const char *pName, const char *pRe
 
 void CWarList::RemoveWarEntryInGame(int WarType, const char *pName, bool IsClan)
 {
-	if(str_comp(pName, "") == 0)
+	if(!str_comp(pName, ""))
 		return;
+
 	if(WarType >= (int)m_WarTypes.size())
 		return;
 
 	CWarType *pWarType = m_WarTypes[WarType];
 	CWarEntry Entry(pWarType);
 	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "If you See this then %s", "something went really wrong");
 
 	if(IsClan)
 	{
@@ -265,23 +252,8 @@ void CWarList::RemoveWarEntryInGame(int WarType, const char *pName, bool IsClan)
 	{
 		str_copy(Entry.m_aName, pName);
 		str_format(aBuf, sizeof(aBuf), "removed \"%s\" from the %s list", pName, pWarType->m_aWarName);
-		{
-			CTempEntry TempEntry(pName, pName, "");
-
-			auto it = std::find(GameClient()->m_Fex.m_TempEntries.begin(), GameClient()->m_Fex.m_TempEntries.end(), TempEntry);
-			if(it != GameClient()->m_Fex.m_TempEntries.end())
-			{
-				for(auto it2 = GameClient()->m_Fex.m_TempEntries.begin(); it2 != GameClient()->m_Fex.m_TempEntries.end();)
-				{
-					bool IsDuplicate = !str_comp(it2->m_aTempWar, pName) || !str_comp(it2->m_aTempHelper, pName);
-
-					if(IsDuplicate)
-						it2 = GameClient()->m_Fex.m_TempEntries.erase(it2);
-					else
-						++it2;
-				}
-			}
-		}
+		GameClient()->m_Fex.UnTempWar(pName, true);
+		GameClient()->m_Fex.UnTempHelper(pName, true);
 	}
 	GameClient()->aMessage(aBuf);
 	RemoveWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_pWarType->m_aWarName);
@@ -344,7 +316,8 @@ void CWarList::DelMute(const char *pName, bool Silent)
 			}
 		}
 	}
-	GameClient()->m_Fex.UnTempMute(pName, true);
+	if(GameClient()->m_Fex.UnTempMute(pName, true))
+		str_format(aBuf, sizeof(aBuf), "Removed \"%s\" from the Mute List", pName);
 
 	if(!Silent)
 		GameClient()->aMessage(aBuf);
@@ -376,6 +349,7 @@ void CWarList::UpsertWarType(int Index, const char *pType, ColorRGBA Color)
 		AddWarType(pType, Color);
 	}
 }
+
 
 void CWarList::AddWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType)
 {
@@ -584,7 +558,7 @@ void CWarList::GetReason(char *pReason, int ClientId)
 	str_copy(pReason, m_WarPlayers[ClientId].m_aReason, sizeof(m_WarPlayers[ClientId].m_aReason));
 }
 
-CWarDataCache CWarList::GetWarData(int ClientId)
+CWarDataCache &CWarList::GetWarData(int ClientId)
 {
 	return m_WarPlayers[ClientId];
 }
@@ -604,7 +578,7 @@ void CWarList::UpdateWarPlayers()
 		if(!GameClient()->m_aClients[i].m_Active)
 			continue;
 
-		m_WarPlayers[i].IsMuted = false; // A-Client [Mutes]
+		m_WarPlayers[i].IsMuted = false; // E-Client [Mutes]
 
 		m_WarPlayers[i].IsWarName = false;
 		m_WarPlayers[i].IsWarClan = false;
@@ -635,7 +609,7 @@ void CWarList::UpdateWarPlayers()
 			}
 		}
 
-		for(CMuteEntry &Entry : m_MuteEntries) // A-Client [Mutes]
+		for(CMuteEntry &Entry : m_MuteEntries) // E-Client [Mutes]
 		{
 			if(str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aMutedName) == 0 && str_comp(Entry.m_aMutedName, "") != 0)
 			{
@@ -643,72 +617,6 @@ void CWarList::UpdateWarPlayers()
 			}
 		}
 	}
-}
-
-void CWarList::GetOnlineWars(std::vector<CWarEntry>& vOnlineWars)
-{
-    for(const auto& Entry : m_WarEntries)
-    {
-        if(IsPlayerOnServer(Entry.m_aName, Entry.m_aClan))
-        {
-            vOnlineWars.push_back(Entry);
-        }
-    }
-}
-
-void CWarList::GetOfflineWars(std::vector<CWarEntry>& vOfflineWars)
-{
-    for(const auto& Entry : m_WarEntries)
-    {
-        if(!IsPlayerOnServer(Entry.m_aName, Entry.m_aClan))
-        {
-            vOfflineWars.push_back(Entry); 
-        }
-    }
-}
-
-bool CWarList::IsPlayerOnServer(const char* pName, const char* pClan)
-{
-    // Check if player/clan is on any server
-    for(int i = 0; i < MAX_CLIENTS; i++)
-    {
-        if(!GameClient()->m_aClients[i].m_Active)
-            continue;
-
-        if(str_comp(pName, GameClient()->m_aClients[i].m_aName) == 0)
-            return true;
-            
-        if(str_comp(pClan, GameClient()->m_aClients[i].m_aClan) == 0) 
-            return true;
-    }
-    return false;
-}
-
-CWarEntry* CWarList::GetWar(int Index)
-{
-    if(Index >= 0 && Index < (int)m_WarEntries.size())
-        return &m_WarEntries[Index];
-    return nullptr;
-}
-
-bool CWarList::IsWarPlayer(const char* pName)
-{
-    for(const auto& Entry : m_WarEntries)
-    {
-        if(str_comp(Entry.m_aName, pName) == 0)
-            return true;
-    }
-    return false;
-}
-
-bool CWarList::IsWarClan(const char* pClan) 
-{
-    for(const auto& Entry : m_WarEntries)
-    {
-        if(str_comp(Entry.m_aClan, pClan) == 0)
-            return true;
-    }
-    return false;
 }
 
 CWarList::~CWarList()
@@ -726,7 +634,7 @@ CWarList::CWarList()
 
 bool CWarList::RemoveEntryByName(int Type, const char* pName)
 {
-    // Type 1 = War, 2 = Team, 3 = Helper
+    // Type 1 = War, 2 = Team, 3 = Helper, others = 4 etc..
     if(Type < 1 || Type >= (int)m_WarTypes.size() || !pName)
         return false;
 
@@ -756,6 +664,7 @@ static void EscapeParam(char *pDst, const char *pSrc, int Size)
 {
 	str_escape(&pDst, pSrc, pDst + Size);
 }
+
 void CWarList::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData)
 {
 	CWarList *pThis = (CWarList *)pUserData;

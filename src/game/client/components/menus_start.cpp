@@ -268,15 +268,18 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 	Ui()->DoLabel(&VersionUpdate, aBuf, 14.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
-#elif defined(CONF_INFORM_UPDATE)
-	if(str_comp(Client()->LatestVersion(), "0") != 0)
+#endif
+	if(str_comp(GameClient()->m_Update.m_aVersionStr, "0") != 0)
 	{
 		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), Localize("DDNet %s is out!"), Client()->LatestVersion());
+		str_format(aBuf, sizeof(aBuf), Localize("FeX v%s is out!"), GameClient()->m_Update.m_aVersionStr);
 		TextRender()->TextColor(TextRender()->DefaultTextColor());
-		Ui()->DoLabel(&VersionUpdate, aBuf, 14.0f, TEXTALIGN_MC);
+		static CButtonContainer s_VersionUpdate;
+		if(DoButton_Menu(&s_VersionUpdate, Localize(aBuf), 0, &VersionUpdate, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		{
+			Client()->ViewLink("https://github.com/faffa81/FeX-V2-Client/releases/latest");
+		}
 	}
-#endif
 
 	if(NewPage != -1)
 	{

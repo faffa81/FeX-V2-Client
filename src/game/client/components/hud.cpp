@@ -693,7 +693,6 @@ void CHud::RenderTeambalanceWarning()
 
 void CHud::RenderCursor()
 {
-<<<<<<< HEAD
 	if(Client()->State() != IClient::STATE_DEMOPLAYBACK && m_pClient->m_Snap.m_pLocalCharacter)
 	{
 		// render local cursor
@@ -722,15 +721,7 @@ void CHud::RenderCursor()
 
 	int CurWeapon = maximum(0, m_pClient->m_CursorInfo.Weapon() % NUM_WEAPONS);
 	vec2 TargetPos = m_pClient->m_CursorInfo.WorldTarget();
-
-	float CenterX = m_pClient->m_Camera.m_Center.x;
-	float CenterY = m_pClient->m_Camera.m_Center.y;
-	float Zoom = m_pClient->m_Camera.m_Zoom;
-=======
-	int CurWeapon = 0;
-	vec2 TargetPos;
 	float Alpha = 1.0f;
->>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 
 	const vec2 Center = m_pClient->m_Camera.m_Center;
 	float aPoints[4];
@@ -749,8 +740,6 @@ void CHud::RenderCursor()
 		if(!g_Config.m_ClSpecCursor || !m_pClient->m_CursorInfo.IsAvailable())
 			return;
 
-		bool RenderSpecCursor = (m_pClient->m_Snap.m_SpecInfo.m_Active && m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != SPEC_FREEVIEW) || Client()->State() == IClient::STATE_DEMOPLAYBACK;
-
 		if(!RenderSpecCursor)
 			return;
 
@@ -768,17 +757,14 @@ void CHud::RenderCursor()
 			Alpha /= 2.0f;
 	}
 
-<<<<<<< HEAD
 	// render spec cursor
 	if(!g_Config.m_ClVisualCursorSpec)
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, Clamped ? .5f : 1.f);
+		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.f);
 	if(g_Config.m_ClVisualCursorSpec)
 	{
 		Graphics()->SetColor(GameClient()->m_Visual.m_Cursor.m_VisualColor.WithAlpha(1.0f));
 	}
-=======
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
->>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 	Graphics()->TextureSet(m_pClient->m_GameSkin.m_aSpriteWeaponCursors[CurWeapon]);
 	Graphics()->RenderQuadContainerAsSprite(m_HudQuadContainerIndex, m_aCursorOffset[CurWeapon], TargetPos.x, TargetPos.y);
 }
@@ -1234,210 +1220,210 @@ void CHud::RenderPlayerState(const int ClientId)
 	}
 }
 
-void CHud::RenderQuickActions(const int ClientId)
-{
-    if(!g_Config.m_ClShowQuickActions || ClientId < 0)
-        return;
+// void CHud::RenderQuickActions(const int ClientId)
+// {
+//     if(!g_Config.m_ClShowQuickActions || ClientId < 0)
+//         return;
 
-    // Get player position on screen
-    vec2 Position;
-    if(!m_pClient->m_Camera.GetCharacterPosition(ClientId, Position))
-        return;
+//     // Get player position on screen
+//     vec2 Position;
+//     if(!m_pClient->m_Camera.GetCharacterPosition(ClientId, Position))
+//         return;
 
-    RenderTools()->MapScreenToInterface(m_pClient->m_Camera.m_Center.x, m_pClient->m_Camera.m_Center.y);
+//     RenderTools()->MapScreenToInterface(m_pClient->m_Camera.m_Center.x, m_pClient->m_Camera.m_Center.y);
 
-    const float FontSize = 13.0f;
-    const float Padding = 2.0f;
-    const float BoxWidth = 100.0f;
-    const float LineHeight = FontSize + Padding;
+//     const float FontSize = 13.0f;
+//     const float Padding = 2.0f;
+//     const float BoxWidth = 100.0f;
+//     const float LineHeight = FontSize + Padding;
     
-    // Calculate position above player
-    float StartY = Position.y - 180.0f; // Offset above player
-    float StartX = Position.x - BoxWidth/2;
+//     // Calculate position above player
+//     float StartY = Position.y - 180.0f; // Offset above player
+//     float StartX = Position.x - BoxWidth/2;
 
-    // Background box
-    Graphics()->DrawRect(StartX, StartY, BoxWidth, LineHeight * 3, ColorRGBA(0,0,0,0.5f), IGraphics::CORNER_ALL, 3.0f);
+//     // Background box
+//     Graphics()->DrawRect(StartX, StartY, BoxWidth, LineHeight * 3, ColorRGBA(0,0,0,0.5f), IGraphics::CORNER_ALL, 3.0f);
 
-    const char* pPlayerName = m_pClient->m_aClients[ClientId].m_aName;
-    const char* pPlayerClan = m_pClient->m_aClients[ClientId].m_aClan;
+//     const char* pPlayerName = m_pClient->m_aClients[ClientId].m_aName;
+//     const char* pPlayerClan = m_pClient->m_aClients[ClientId].m_aClan;
 
-    if(!s_ShowClanPage) // Player name page
-    {
-        // War entry (W key)
-        {
-            ColorRGBA WarColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[1]->m_Color)); // Enemy type
-			Graphics()->TextureSet(IGraphics::CTextureHandle());
-            Graphics()->QuadsBegin();
-            Graphics()->SetColor(WarColor.r, WarColor.g, WarColor.b, 0.5f);
-            Graphics()->QuadsEnd();
-            TextRender()->Text(StartX + Padding, StartY, FontSize, "Add War (W)", -1);
-        }
+//     if(!s_ShowClanPage) // Player name page
+//     {
+//         // War entry (W key)
+//         {
+//             ColorRGBA WarColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[1]->m_Color)); // Enemy type
+// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
+//             Graphics()->QuadsBegin();
+//             Graphics()->SetColor(WarColor.r, WarColor.g, WarColor.b, 0.5f);
+//             Graphics()->QuadsEnd();
+//             TextRender()->Text(StartX + Padding, StartY, FontSize, "Add War (W)", -1);
+//         }
 
-        // Team entry (A key)
-        {
-            ColorRGBA TeamColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[2]->m_Color)); // Team type
-			Graphics()->TextureSet(IGraphics::CTextureHandle());
-            Graphics()->QuadsBegin();
-            Graphics()->SetColor(TeamColor.r, TeamColor.g, TeamColor.b, 0.5f);
-            Graphics()->QuadsEnd();
-            TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "Add Team (A)", -1);
-        }
+//         // Team entry (A key)
+//         {
+//             ColorRGBA TeamColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[2]->m_Color)); // Team type
+// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
+//             Graphics()->QuadsBegin();
+//             Graphics()->SetColor(TeamColor.r, TeamColor.g, TeamColor.b, 0.5f);
+//             Graphics()->QuadsEnd();
+//             TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "Add Team (A)", -1);
+//         }
 
-        // Helper entry (D key)
-        {
-            ColorRGBA HelperColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[3]->m_Color)); // Helper type 
-			Graphics()->TextureSet(IGraphics::CTextureHandle());
-            Graphics()->QuadsBegin();
-            Graphics()->SetColor(HelperColor.r, HelperColor.g, HelperColor.b, 0.5f);
-            Graphics()->QuadsEnd();
-            TextRender()->Text(StartX + Padding, StartY + LineHeight * 2, FontSize, "Add Helper (D)", -1);
-        }
-    }
-    else // Clan page
-    {
-        if(str_comp(pPlayerClan, "") == 0)
-        {
-            TextRender()->TextColor(1,0.5f,0.5f,1);
-            TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "No Clan", -1);
-            TextRender()->TextColor(1,1,1,1);
-            return;
-        }
+//         // Helper entry (D key)
+//         {
+//             ColorRGBA HelperColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[3]->m_Color)); // Helper type 
+// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
+//             Graphics()->QuadsBegin();
+//             Graphics()->SetColor(HelperColor.r, HelperColor.g, HelperColor.b, 0.5f);
+//             Graphics()->QuadsEnd();
+//             TextRender()->Text(StartX + Padding, StartY + LineHeight * 2, FontSize, "Add Helper (D)", -1);
+//         }
+//     }
+//     else // Clan page
+//     {
+//         if(str_comp(pPlayerClan, "") == 0)
+//         {
+//             TextRender()->TextColor(1,0.5f,0.5f,1);
+//             TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "No Clan", -1);
+//             TextRender()->TextColor(1,1,1,1);
+//             return;
+//         }
 
-        // War clan entry
-        {
-            ColorRGBA WarColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[1]->m_Color));
-			Graphics()->TextureSet(IGraphics::CTextureHandle());
-            Graphics()->QuadsBegin();
-			Graphics()->SetColor(WarColor.r, WarColor.g, WarColor.b, 0.5f);
-            Graphics()->QuadsEnd();
-            TextRender()->Text(StartX + Padding, StartY, FontSize, "Add War Clan (W)", -1);
-        }
+//         // War clan entry
+//         {
+//             ColorRGBA WarColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[1]->m_Color));
+// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
+//             Graphics()->QuadsBegin();
+// 			Graphics()->SetColor(WarColor.r, WarColor.g, WarColor.b, 0.5f);
+//             Graphics()->QuadsEnd();
+//             TextRender()->Text(StartX + Padding, StartY, FontSize, "Add War Clan (W)", -1);
+//         }
 
-        // Team clan entry
-        {
-            ColorRGBA TeamColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[2]->m_Color));
-			Graphics()->TextureSet(IGraphics::CTextureHandle());
-            Graphics()->QuadsBegin();
-            Graphics()->SetColor(TeamColor.r, TeamColor.g, TeamColor.b, 0.5f);
-            Graphics()->QuadsEnd();
-            TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "Add Team Clan (A)", -1);
-        }
+//         // Team clan entry
+//         {
+//             ColorRGBA TeamColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[2]->m_Color));
+// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
+//             Graphics()->QuadsBegin();
+//             Graphics()->SetColor(TeamColor.r, TeamColor.g, TeamColor.b, 0.5f);
+//             Graphics()->QuadsEnd();
+//             TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "Add Team Clan (A)", -1);
+//         }
 
-        // Helper clan entry
-        {
-            ColorRGBA HelperColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[3]->m_Color));
-			Graphics()->TextureSet(IGraphics::CTextureHandle());
-            Graphics()->QuadsBegin();
-            Graphics()->SetColor(HelperColor.r, HelperColor.g, HelperColor.b, 0.5f);
-            Graphics()->QuadsEnd();
-            TextRender()->Text(StartX + Padding, StartY + LineHeight * 2, FontSize, "Add Helper Clan (D)", -1);
-        }
-    }
+//         // Helper clan entry
+//         {
+//             ColorRGBA HelperColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[3]->m_Color));
+// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
+//             Graphics()->QuadsBegin();
+//             Graphics()->SetColor(HelperColor.r, HelperColor.g, HelperColor.b, 0.5f);
+//             Graphics()->QuadsEnd();
+//             TextRender()->Text(StartX + Padding, StartY + LineHeight * 2, FontSize, "Add Helper Clan (D)", -1);
+//         }
+//     }
 
-	if(m_WKeyPressed)
-	{
-		m_WKeyPressed = false; // Reset after handling
-		if(!s_ShowClanPage)
-		{
-			// Check if player exists in any lists and remove if found
-			bool bRemoved = false;
-			for(int Type = 1; Type <= 3; Type++)
-			{
-				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
-				{
-					bRemoved = true;
-					break;
-				}
-			}
+// 	if(m_WKeyPressed)
+// 	{
+// 		m_WKeyPressed = false; // Reset after handling
+// 		if(!s_ShowClanPage)
+// 		{
+// 			// Check if player exists in any lists and remove if found
+// 			bool bRemoved = false;
+// 			for(int Type = 1; Type <= 3; Type++)
+// 			{
+// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
+// 				{
+// 					bRemoved = true;
+// 					break;
+// 				}
+// 			}
 			
-			if(!bRemoved)
-				GameClient()->m_WarList.AddWarEntryInGame(1, pPlayerName, "", false);
-		}
-		else if(str_comp(pPlayerClan, "") != 0)
-		{
-			bool bRemoved = false;
-			for(int Type = 1; Type <= 3; Type++)
-			{
-				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
-				{
-					bRemoved = true;
-					break;
-				}
-			}
+// 			if(!bRemoved)
+// 				GameClient()->m_WarList.AddWarEntryInGame(1, pPlayerName, "", false);
+// 		}
+// 		else if(str_comp(pPlayerClan, "") != 0)
+// 		{
+// 			bool bRemoved = false;
+// 			for(int Type = 1; Type <= 3; Type++)
+// 			{
+// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
+// 				{
+// 					bRemoved = true;
+// 					break;
+// 				}
+// 			}
 			
-			if(!bRemoved)
-				GameClient()->m_WarList.AddWarEntryInGame(1, pPlayerName, "", true);
-		}
-	}
-	else if(m_AKeyPressed)
-	{
-		m_AKeyPressed = false; // Reset after handling
-		if(!s_ShowClanPage)
-		{
-			bool bRemoved = false;
-			for(int Type = 1; Type <= 3; Type++)
-			{
-				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
-				{
-					bRemoved = true;
-					break;
-				}
-			}
+// 			if(!bRemoved)
+// 				GameClient()->m_WarList.AddWarEntryInGame(1, pPlayerName, "", true);
+// 		}
+// 	}
+// 	else if(m_AKeyPressed)
+// 	{
+// 		m_AKeyPressed = false; // Reset after handling
+// 		if(!s_ShowClanPage)
+// 		{
+// 			bool bRemoved = false;
+// 			for(int Type = 1; Type <= 3; Type++)
+// 			{
+// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
+// 				{
+// 					bRemoved = true;
+// 					break;
+// 				}
+// 			}
 			
-			if(!bRemoved)
-				GameClient()->m_WarList.AddWarEntryInGame(2, pPlayerName, "", false);
-		}
-		else if(str_comp(pPlayerClan, "") != 0)
-		{
-			bool bRemoved = false;
-			for(int Type = 1; Type <= 3; Type++)
-			{
-				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
-				{
-					bRemoved = true;
-					break;
-				}
-			}
+// 			if(!bRemoved)
+// 				GameClient()->m_WarList.AddWarEntryInGame(2, pPlayerName, "", false);
+// 		}
+// 		else if(str_comp(pPlayerClan, "") != 0)
+// 		{
+// 			bool bRemoved = false;
+// 			for(int Type = 1; Type <= 3; Type++)
+// 			{
+// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
+// 				{
+// 					bRemoved = true;
+// 					break;
+// 				}
+// 			}
 			
-			if(!bRemoved)
-				GameClient()->m_WarList.AddWarEntryInGame(2, pPlayerName, "", true);
-		}
-	}
-	else if(m_DKeyPressed)
-	{
-		m_DKeyPressed = false; // Reset after handling
-		if(!s_ShowClanPage)
-		{
-			bool bRemoved = false;
-			for(int Type = 1; Type <= 3; Type++)
-			{
-				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
-				{
-					bRemoved = true;
-					break;
-				}
-			}
+// 			if(!bRemoved)
+// 				GameClient()->m_WarList.AddWarEntryInGame(2, pPlayerName, "", true);
+// 		}
+// 	}
+// 	else if(m_DKeyPressed)
+// 	{
+// 		m_DKeyPressed = false; // Reset after handling
+// 		if(!s_ShowClanPage)
+// 		{
+// 			bool bRemoved = false;
+// 			for(int Type = 1; Type <= 3; Type++)
+// 			{
+// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
+// 				{
+// 					bRemoved = true;
+// 					break;
+// 				}
+// 			}
 			
-			if(!bRemoved)
-				GameClient()->m_WarList.AddWarEntryInGame(3, pPlayerName, "", false);
-		}
-		else if(str_comp(pPlayerClan, "") != 0)
-		{
-			bool bRemoved = false;
-			for(int Type = 1; Type <= 3; Type++)
-			{
-				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
-				{
-					bRemoved = true;
-					break;
-				}
-			}
+// 			if(!bRemoved)
+// 				GameClient()->m_WarList.AddWarEntryInGame(3, pPlayerName, "", false);
+// 		}
+// 		else if(str_comp(pPlayerClan, "") != 0)
+// 		{
+// 			bool bRemoved = false;
+// 			for(int Type = 1; Type <= 3; Type++)
+// 			{
+// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
+// 				{
+// 					bRemoved = true;
+// 					break;
+// 				}
+// 			}
 			
-			if(!bRemoved)
-				GameClient()->m_WarList.AddWarEntryInGame(3, pPlayerName, "", true);
-		}
-	}
-}
+// 			if(!bRemoved)
+// 				GameClient()->m_WarList.AddWarEntryInGame(3, pPlayerName, "", true);
+// 		}
+// 	}
+// }
 
 void CHud::RenderNinjaBarPos(const float x, float y, const float Width, const float Height, float Progress, const float Alpha)
 {
@@ -2037,10 +2023,11 @@ void CHud::OnRender()
 			{
 				RenderPlayerState(SpectatorId);
 			}
-			if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowQuickActions)
-			{
-				RenderQuickActions(SpectatorId);
-			}
+			// Todo:
+			// if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowQuickActions)
+			// {
+			// 	RenderQuickActions(SpectatorId);
+			// }
 			RenderMovementInformation();
 			RenderSpectatorHud();
 		}

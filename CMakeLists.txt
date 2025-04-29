@@ -2382,6 +2382,10 @@ if(CLIENT)
     components/fex/fexwarlist.h
     components/fex/fx_enums.h
     components/fex/menus_fex.cpp
+
+    ## Update ##
+    components/fex/update.cpp
+    components/fex/update.h
     ### DDNet Client ###
 
     components/flow.cpp

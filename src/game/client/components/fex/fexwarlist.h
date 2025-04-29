@@ -26,7 +26,6 @@ public:
 	bool m_Removable = true;
 	bool m_Imported = false;
 	int m_Index = 0;
-	
 	CWarType(const char *pName, ColorRGBA Color = ColorRGBA(1, 1, 1, 1), bool Removable = true, bool IsImport = false)
 	{
 		str_copy(m_aWarName, pName);
@@ -78,8 +77,8 @@ public:
 	}
 };
 
-// A-Client [Mutes]
-class CMuteEntry 
+// E-Client [Mutes]
+class CMuteEntry
 {
 public:
 	char m_aMutedName[MAX_NAME_LENGTH] = "";
@@ -103,7 +102,7 @@ public:
 	bool IsWarName = false;
 	bool IsWarClan = false;
 
-	bool IsMuted = false; // A-Client [Mutes]
+	bool IsMuted = false; // E-Client [Mutes]
 
 	std::vector<char> m_WarGroupMatches = {false, false, false, false};
 
@@ -112,7 +111,6 @@ public:
 
 class CWarList : public CComponent
 {
-
 	// The war list will have these commands
 	//
 	// Preset Commands
@@ -154,7 +152,7 @@ class CWarList : public CComponent
 	static void ConRemoveName(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveClan(IConsole::IResult *pResult, void *pUserData);
 
-	// A-Client
+	// E-Client
 	static void ConAddMute(IConsole::IResult *pResult, void *pUserData);
 	static void ConDelMute(IConsole::IResult *pResult, void *pUserData);
 
@@ -162,9 +160,8 @@ class CWarList : public CComponent
 	static void ConAddWarEntry(IConsole::IResult *pResult, void *pUserData);
 	static void ConUpsertWarType(IConsole::IResult *pResult, void *pUserData);
 
-	// A-Client
+	// E-Client
 	static void ConAddMuteEntry(IConsole::IResult *pResult, void *pUserData);
-
 
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
 
@@ -176,27 +173,21 @@ public:
 	CWarList();
 	~CWarList();
 
-	// duplicate war types are NOT allowed
+	/*
+	* duplicate war types are NOT allowed
+	* 0 = none
+	* 1 = enemy
+	* 2 = team
+	* 3 = helper
+	*/
 	std::vector<CWarType *> m_WarTypes = {
-		new CWarType("none", ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false),
-		new CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), false),
-		new CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), false),
-		new CWarType("helper", ColorRGBA(0.9f, 0.87f, 0.2f, 1.0f), false)
+		new CWarType("none", ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f), false), // 0
+		new CWarType("enemy", ColorRGBA(1.0f, 0.2f, 0.2f, 1.0f), false), // 1
+		new CWarType("team", ColorRGBA(0.0f, 0.9f, 0.2f, 1.0f), false), // 2
+		new CWarType("helper", ColorRGBA(0.9f, 0.87f, 0.2f, 1.0f), false), // 3
 	};
 
-		// Add methods for server browser integration
-		void GetOnlineWars(std::vector<CWarEntry>& vOnlineWars);
-		void GetOfflineWars(std::vector<CWarEntry>& vOfflineWars); 
-		bool IsWarPlayer(const char* pName);
-		bool IsWarClan(const char* pClan);
-		int GetNumWars() const { return m_WarEntries.size(); }
-		CWarEntry* GetWar(int Index);
-		
-		// Helper method to check server status
-		bool IsPlayerOnServer(const char* pName, const char* pClan);
-
-
-	// A-Client [Mutes]
+	// E-Client [Mutes]
 	std::vector<CMuteEntry> m_MuteEntries;
 
 	// None type war entries will float to the top of the list, so they can be assigned a type
@@ -223,16 +214,14 @@ public:
 	void AddWarEntryInGame(int WarType, const char *pName, const char *pReason, bool IsClan);
 	void RemoveWarEntryInGame(int WarType, const char *pName, bool IsClan);
 
-
-	// A-Client
-	void AddMuteEntry(const char *pName); // A-Client [Mutes]
+	// E-Client
+	void AddMuteEntry(const char *pName); // E-Client [Mutes]
 	void AddMute(const char *pName);
 	void DelMute(const char *pName, bool Silent = false);
 
 	int FindWarTypeWithName(const char *pName);
 	int FindWarTypeWithClan(const char *pClan);
 	char *GetWarTypeName(int ClientId);
-
 
 	void AddWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType);
 	void AddWarType(const char *pType, ColorRGBA Color);
@@ -255,14 +244,14 @@ public:
 	bool GetClanWar(int ClientId);
 
 	void GetReason(char *pReason, int ClientId);
-	CWarDataCache GetWarData(int ClientId);
+	CWarDataCache &GetWarData(int ClientId);
 
 	void SortWarEntries();
 
 	CWarType *FindWarType(const char *pType);
 	CWarEntry *FindWarEntry(const char *pName, const char *pClan, const char *pType);
 
-	bool RemoveEntryByName(int Type, const char* pName);
+	bool RemoveEntryByName(int Type, const char *pName);
 };
 
 #endif

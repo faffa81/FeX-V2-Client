@@ -71,6 +71,8 @@
 #include "components/fex/fexbindchat.h"
 #include "components/fex/fexvisual.h"
 
+#include "components/fex/update.h"
+
 #include <vector>
 #include "components/fex/fextrails.h"
 #include "components/fex/fexoutlines.h"
@@ -180,6 +182,7 @@ public:
 	CStatusBar m_StatusBar;
 	CBindWheel m_Bindwheel;
 	CVisual m_Visual;
+	CUpdate m_Update;
 
 	// all components	
 	CInfoMessages m_InfoMessages;
@@ -511,7 +514,6 @@ public:
 		CCharacterCore m_Predicted;
 		CCharacterCore m_PrevPredicted;
 
-<<<<<<< HEAD
 		// FEX SHIT FROM TATER
 
 		vec2 m_ImprovedPredPos = vec2(0, 0);
@@ -519,10 +521,7 @@ public:
 
 		float m_Uncertainty = 0.0f;
 
-		std::shared_ptr<CManagedTeeRenderInfo> m_pSkinInfo; // this is what the server reports
-=======
 		std::shared_ptr<CManagedTeeRenderInfo> m_pSkinInfo = nullptr; // this is what the server reports
->>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 		CTeeRenderInfo m_RenderInfo; // this is what we use
 
 		float m_Angle;
@@ -773,6 +772,8 @@ public:
 	bool CheckNewInput() override;
 
 	void aMessage(const char *pString);
+
+	int GetClientId(const char *pName);
 
 	void LoadGameSkin(const char *pPath, bool AsDir = false);
 	void LoadEmoticonsSkin(const char *pPath, bool AsDir = false);

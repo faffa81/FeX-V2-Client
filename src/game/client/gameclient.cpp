@@ -172,6 +172,7 @@ void CGameClient::OnConsoleInit()
 						  // FeX
 
 						  &m_FreezeKill,
+						  &m_Update,
 
 					      &CMenus::m_Binder,
 					      &m_GameConsole,
@@ -660,19 +661,21 @@ void CGameClient::ConRemoveScore(IConsole::IResult *pResult, void *pUserData)
 
 	if(pClient->m_1v1LastScorePlayer == true)
 	{
-		pClient->m_1v1PlayerScore--;
 		if(pClient->m_1v1PlayerScore == -1)
 		{
 			pClient->m_1v1PlayerScore++;
 		}
+		else
+			pClient->m_1v1PlayerScore--;
 	}
 	else if(pClient->m_1v1LastScorePlayer == false)
 	{
-		pClient->m_1v1EnemyScore--;
 		if(pClient->m_1v1EnemyScore == -1)
 		{
 			pClient->m_1v1EnemyScore++;
 		}
+		else
+			pClient->m_1v1EnemyScore--;
 	}
 
 	char name[16];
@@ -5410,4 +5413,18 @@ bool CGameClient::CheckNewInput()
 void CGameClient::aMessage(const char *pString)
 {
 	m_Chat.AddLine(TEAM_MESSAGE, 0, pString);
+}
+
+int CGameClient::GetClientId(const char *pName)
+{
+	int ClientId;
+
+	for(ClientId = 0; ClientId < MAX_CLIENTS; ClientId++)
+	{
+		if(!str_comp(pName, m_aClients[ClientId].m_aName))
+		{
+			return ClientId;
+		}
+	}
+	return -1;
 }

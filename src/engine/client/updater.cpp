@@ -31,7 +31,7 @@ public:
 
 static const char *GetUpdaterUrl(char *pBuf, int BufSize, const char *pFile)
 {
-	str_format(pBuf, BufSize, "https://update.ddnet.org/%s", pFile);
+	str_format(pBuf, BufSize, "https://github.com/faffa81/FeX-V2-Client/releases/download/v5.1/5.1.zip", pFile);
 	return pBuf;
 }
 

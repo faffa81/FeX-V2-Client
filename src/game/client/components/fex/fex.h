@@ -13,22 +13,33 @@ public:
 	char m_aTempWar[16] = "";
 	char m_aTempHelper[16] = "";
 	char m_aTempMute[16] = "";
+	char m_aReason[128] = "";
 
-	CTempEntry(const char *pTempWar, const char *pTempHelper, const char *pTempMute)
+	/*
+	* Type = 0 -> TempWar
+	* Type = 1 -> TempHelper
+	* type = 2 -> TempMute
+	*/
+	CTempEntry(int Type, const char *pName, const char *pReason)
 	{
-		if(!str_comp(pTempWar, ""))
-			str_copy(m_aTempWar, pTempWar);
-		if(!str_comp(pTempHelper, ""))
-			str_copy(m_aTempHelper, pTempHelper);
-		if(!str_comp(pTempMute, ""))
-			str_copy(m_aTempMute, pTempMute);
+		if(Type == 0)
+			str_copy(m_aTempWar, pName);
+		else if(Type == 1)
+			str_copy(m_aTempHelper, pName);
+		else if(Type == 2)
+			str_copy(m_aTempMute, pName);
+
+		if(!str_comp(pReason, ""))
+			str_copy(m_aReason, pReason);
 	}
 
 	bool operator==(const CTempEntry &Other) const
 	{
-		return !str_comp(m_aTempWar, Other.m_aTempWar) || !str_comp(m_aTempHelper, Other.m_aTempHelper) || !str_comp(m_aTempMute, Other.m_aTempMute);
+		bool TempWarMatch = !str_comp(m_aTempWar, Other.m_aTempWar) && str_comp(m_aTempWar, "") != 0;
+		bool TempHelperMatch = !str_comp(m_aTempHelper, Other.m_aTempHelper) && str_comp(m_aTempHelper, "") != 0;
+		bool TempMuteMatch = !str_comp(m_aTempMute, Other.m_aTempMute) && str_comp(m_aTempHelper, "") != 0;
+		return (TempWarMatch || TempHelperMatch || TempMuteMatch);
 	}
-
 };
 
 class CTempData
@@ -37,19 +48,19 @@ public:
 	bool IsTempWar = false;
 	bool IsTempHelper = false;
 	bool IsTempMute = false;
-};
 
+	char m_aReason[128] = "";
+};
 class CFex : public CComponent
 {
 public:
-    void TempWar(const char *pName);
-	void UnTempWar(const char *pName, bool Silent = false);
+	void TempWar(const char *pName, const char *pReason, bool Silent = false);
+	void TempHelper(const char *pName, const char *pReason, bool Silent = false);
+	void TempMute(const char *pName, bool Silent = false);
 
-	void TempHelper(const char *pName);
-	void UnTempHelper(const char *pName, bool Silent = false);
-
-	void TempMute(const char *pName);
-	void UnTempMute(const char *pName, bool Silent = false);
+	bool UnTempHelper(const char *pName, bool Silent = false);
+	bool UnTempWar(const char *pName, bool Silent = false);
+	bool UnTempMute(const char *pName, bool Silent = false);
 
     bool IsSpecialClan(const char *pClanName);
 
@@ -71,6 +82,8 @@ public:
 	std::vector<CTempEntry> m_TempEntries;
 	CTempData m_TempPlayers[MAX_CLIENTS];
 	void UpdateTempPlayers();
+	void RemoveWarEntryDuplicates(const char *pName);
+	void RemoveWarEntry(int Type, const char *pName);
     virtual void OnConsoleInit() override;
     void ProcessAutoMessage();
     void DisplayRandomClans();
@@ -79,8 +92,6 @@ public:
     static void ConPlayerInfo(IConsole::IResult *pResult, void *pUserData);
     static void ConAutoMessage(IConsole::IResult *pResult, void *pUserData);
     void OnlineInfo(bool Integrate = false);
-	void RemoveWarEntryDuplicates(const char *pName);
-	void RemoveWarEntry(const char *pNameW, const char *pNameH, const char *pNameM);
     int IdWithName(const char *pName);
     void PlayerInfo(const char *pName);
 
@@ -103,34 +114,6 @@ private:
     virtual void OnNewSnapshot() override;
     virtual void OnInit() override;
     virtual void OnStateChange(int NewState, int OldState) override;
-
-	// // Auto message
-    // bool m_AutoMessageEnabled;
-    // int64_t m_LastMessageTick;
-    // int m_MessageCount;
-    // int64_t m_MessageResetTick;
-    // std::vector<int> m_MessageTargets;
-    // char m_CurrentMessage[256];
-    // bool m_IsWhisper;
-    // int m_CurrentTargetIndex;
-    // bool m_IsClanMode;
-    // char m_SingleTarget[MAX_NAME_LENGTH];
-
-    // void SendAutoMessage();
-    // bool IsValidTarget(int ClientID);
-    // void RefreshTargetList();
-
-    // int64_t m_LastAuthCheck;
-    // void CheckAuthorizedPlayers();
-
-	// char m_OriginalName[MAX_NAME_LENGTH];
-    // void RandomizeName();
-    // void RestoreOriginalName();
-
-	// int64_t m_LastNameChangeTick;
-    // bool m_NameJustChanged;
-
-	// bool m_IsRandomName;
 };
 
 #endif // FEX_H

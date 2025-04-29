@@ -81,17 +81,17 @@ bool CChat::IsCommandPrefix(const char *pStr)
 void CChat::RegisterCommand(const char *pName, const char *pParams, const char *pHelpText)
 {
 	// Don't allow duplicate commands.
-	for(const auto &Command : m_vServerCommands)
+	for(const auto &Command : m_vCommands)
 		if(str_comp(Command.m_aName, pName) == 0)
 			return;
 
-	m_vServerCommands.emplace_back(pName, pParams, pHelpText);
-	m_ServerCommandsNeedSorting = true;
+	m_vCommands.emplace_back(pName, pParams, pHelpText);
+	m_CommandsNeedSorting = true;
 }
 
 void CChat::UnregisterCommand(const char *pName)
 {
-	m_vServerCommands.erase(std::remove_if(m_vServerCommands.begin(), m_vServerCommands.end(), [pName](const CCommand &Command) { return str_comp(Command.m_aName, pName) == 0; }), m_vServerCommands.end());
+	m_vCommands.erase(std::remove_if(m_vCommands.begin(), m_vCommands.end(), [pName](const CCommand &Command) { return str_comp(Command.m_aName, pName) == 0; }), m_vCommands.end());
 }
 
 void CChat::RebuildChat()
@@ -145,10 +145,10 @@ void CChat::Reset()
 	m_IsInputCensored = false;
 	m_EditingNewLine = true;
 	m_ServerSupportsCommandInfo = false;
-	m_ServerCommandsNeedSorting = false;
+	m_CommandsNeedSorting = false;
 	mem_zero(m_aCurrentInputText, sizeof(m_aCurrentInputText));
 	DisableMode();
-	m_vServerCommands.clear();
+	m_vCommands.clear();
 
 	for(int64_t &LastSoundPlayed : m_aLastSoundPlayed)
 		LastSoundPlayed = 0;
@@ -270,10 +270,10 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 	}
 	else if(Event.m_Flags & IInput::FLAG_PRESS && (Event.m_Key == KEY_RETURN || Event.m_Key == KEY_KP_ENTER))
 	{
-		if(m_ServerCommandsNeedSorting)
+		if(m_CommandsNeedSorting)
 		{
-			std::sort(m_vServerCommands.begin(), m_vServerCommands.end());
-			m_ServerCommandsNeedSorting = false;
+			std::sort(m_vCommands.begin(), m_vCommands.end());
+			m_CommandsNeedSorting = false;
 		}
 
 		bool SilentMessage = false;
@@ -346,31 +346,27 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					FoundInput = str_utf8_find_nocase(PlayerName, m_aCompletionBuffer);
 					if(FoundInput != nullptr)
 					{
-						m_aPlayerCompletionList[m_PlayerCompletionListLength].m_ClientId = PlayerInfo->m_ClientId;
+						m_aPlayerCompletionList[m_PlayerCompletionListLength].ClientId = PlayerInfo->m_ClientId;
 						// The score for suggesting a player name is determined by the distance of the search input to the beginning of the player name
-						m_aPlayerCompletionList[m_PlayerCompletionListLength].m_Score = (int)(FoundInput - PlayerName);
+						m_aPlayerCompletionList[m_PlayerCompletionListLength].Score = (int)(FoundInput - PlayerName);
 						m_PlayerCompletionListLength++;
 					}
 				}
 			}
 			std::stable_sort(m_aPlayerCompletionList, m_aPlayerCompletionList + m_PlayerCompletionListLength,
 				[](const CRateablePlayer &p1, const CRateablePlayer &p2) -> bool {
-					return p1.m_Score < p2.m_Score;
+					return p1.Score < p2.Score;
 				});
 		}
 
-<<<<<<< HEAD
 		if(m_pClient->m_Bindchat.ChatDoAutocomplete(ShiftPressed))
 		{
 		}
 		else if(m_aCompletionBuffer[0] == '/' && !m_vCommands.empty())
-=======
-		if(m_aCompletionBuffer[0] == '/' && !m_vServerCommands.empty())
->>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 		{
 			CCommand *pCompletionCommand = nullptr;
 
-			const size_t NumCommands = m_vServerCommands.size();
+			const size_t NumCommands = m_vCommands.size();
 
 			if(ShiftPressed && m_CompletionUsed)
 				m_CompletionChosen--;
@@ -397,7 +393,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					Index = (m_CompletionChosen + i) % NumCommands;
 				}
 
-				auto &Command = m_vServerCommands[Index];
+				auto &Command = m_vCommands[Index];
 
 				if(str_startswith_nocase(Command.m_aName, pCommandStart))
 				{
@@ -455,7 +451,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 					m_CompletionChosen %= m_PlayerCompletionListLength;
 					m_CompletionUsed = true;
 
-					pCompletionClientData = &m_pClient->m_aClients[m_aPlayerCompletionList[m_CompletionChosen].m_ClientId];
+					pCompletionClientData = &m_pClient->m_aClients[m_aPlayerCompletionList[m_CompletionChosen].ClientId];
 					if(!pCompletionClientData->m_Active)
 					{
 						continue;
@@ -974,7 +970,7 @@ void CChat::OnMessage(int MsgType, void *pRawMsg)
 		CNetMsg_Sv_CommandInfo *pMsg = (CNetMsg_Sv_CommandInfo *)pRawMsg;
 		if(!m_ServerSupportsCommandInfo)
 		{
-			m_vServerCommands.clear();
+			m_vCommands.clear();
 			m_ServerSupportsCommandInfo = true;
 		}
 		RegisterCommand(pMsg->m_pName, pMsg->m_pArgsFormat, pMsg->m_pHelpText);
@@ -1726,18 +1722,12 @@ void CChat::OnRender()
 		m_Input.SetScrollOffsetChange(ScrollOffsetChange);
 
 		// Autocompletion hint
-<<<<<<< HEAD
 		if((m_Input.GetString()[0] == '/') && 
 		m_Input.GetString()[1] != '\0' && !m_vCommands.empty())
 		{
 			const char *pCommandStart = m_Input.GetString() + 1; // Skip the prefix
 			
 			for(const auto &Command : m_vCommands)
-=======
-		if(m_Input.GetString()[0] == '/' && m_Input.GetString()[1] != '\0' && !m_vServerCommands.empty())
-		{
-			for(const auto &Command : m_vServerCommands)
->>>>>>> 0b5f8c03817f6f7ca7c006322757a00d1edc701c
 			{
 				if(str_startswith_nocase(Command.m_aName, pCommandStart))
 				{
@@ -2093,41 +2083,68 @@ void CChat::ChatDetection(int ClientId, int Team, const char *pLine)
 					strcpy(CharOname, oName.c_str());
 					char aBuf[512];
 
-					if(GameClient()->m_WarList.FindWarTypeWithName(name) == 2)
+					int PlayerCid = GameClient()->GetClientId(CharOname);
+
+					if(PlayerCid >= 0)
 					{
-						str_format(aBuf, sizeof(aBuf), "%s changed their name to a Teammates [%s]", CharOname, name);
-						if(g_Config.m_ClAutoAddOnNameChange == 2)
-							GameClient()->aMessage(aBuf);
-					}
-					else
-					{
-						if(GameClient()->m_aClients[GameClient()->m_Fex.IdWithName(CharOname)].m_IsWar && !GameClient()->m_aClients[GameClient()->m_Fex.IdWithName(name)].m_IsTeam)
+						CWarDataCache *pWarData = &GameClient()->m_WarList.m_WarPlayers[PlayerCid];
+						CTempData *pTempData = &GameClient()->m_Fex.m_TempPlayers[PlayerCid];
+
+						char Reason[128];
+						str_copy(Reason, CharOname);
+						if(str_comp(pTempData->m_aReason, "") != 0)
+							str_copy(Reason, pTempData->m_aReason);
+
+						if(GameClient()->m_WarList.FindWarTypeWithName(name) == 2)
 						{
-							CTempEntry Entry(name, "", "");
-							str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp War list", name, GameClient()->m_Fex.IdWithName(CharOname));
-							str_copy(Entry.m_aTempWar, name);
-							GameClient()->m_Fex.m_TempEntries.push_back(Entry);
+							str_format(aBuf, sizeof(aBuf), "%s changed their name to a Teammates [%s]", CharOname, name);
 							if(g_Config.m_ClAutoAddOnNameChange == 2)
 								GameClient()->aMessage(aBuf);
 						}
-						else if(GameClient()->m_aClients[GameClient()->m_Fex.IdWithName(CharOname)].m_IsHelper)
+						else
 						{
-							CTempEntry Entry("", name, "");
-							str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp Helper list", name, GameClient()->m_Fex.IdWithName(CharOname));
-							str_copy(Entry.m_aTempHelper, name);
-							GameClient()->m_Fex.m_TempEntries.push_back(Entry);
+							if(pWarData->m_WarGroupMatches[1])
+							{
+								GameClient()->m_Fex.TempWar(name, Reason, true);
+								str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp War list", name);
+								if(g_Config.m_ClAutoAddOnNameChange == 2)
+									GameClient()->aMessage(aBuf);
+							}
+							else if(pWarData->m_WarGroupMatches[3])
+							{
+								GameClient()->m_Fex.TempHelper(name, Reason, true);
+								str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp Helper list", name);
+								if(g_Config.m_ClAutoAddOnNameChange == 2)
+									GameClient()->aMessage(aBuf);
+							}
+							else if(pTempData->IsTempWar)
+							{
+								if(str_comp(pTempData->m_aReason, "") != 0)
+									str_copy(Reason, pTempData->m_aReason);
+
+								GameClient()->m_Fex.TempWar(name, Reason, true);
+								str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp War list", name);
+								if(g_Config.m_ClAutoAddOnNameChange == 2)
+									GameClient()->aMessage(aBuf);
+							}
+							else if(pTempData->IsTempHelper)
+							{
+								if(str_comp(pTempData->m_aReason, "") != 0)
+									str_copy(Reason, pTempData->m_aReason);
+
+								GameClient()->m_Fex.TempHelper(name, Reason, true);
+								str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp Helper list", name);
+								if(g_Config.m_ClAutoAddOnNameChange == 2)
+									GameClient()->aMessage(aBuf);
+							}
+						}
+						if(pWarData->IsMuted || pTempData->IsTempMute)
+						{
+							GameClient()->m_Fex.TempMute(name);
+							str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp Mute list", name);
 							if(g_Config.m_ClAutoAddOnNameChange == 2)
 								GameClient()->aMessage(aBuf);
 						}
-					}
-					if(GameClient()->m_aClients[GameClient()->m_Fex.IdWithName(CharOname)].m_IsMute)
-					{
-						CTempEntry Entry("", "", name);
-						str_format(aBuf, sizeof(aBuf), "Auto Added \"%s\" to Temp Mute list", name, GameClient()->m_Fex.IdWithName(CharOname));
-						str_copy(Entry.m_aTempMute, name);
-						GameClient()->m_Fex.m_TempEntries.push_back(Entry);
-						if(g_Config.m_ClAutoAddOnNameChange == 2)
-							GameClient()->aMessage(aBuf);
 					}
 				}
 			}

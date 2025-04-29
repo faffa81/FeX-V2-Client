@@ -33,27 +33,35 @@ int CFex::IdWithName(const char *pName)
 	return -1;
 }
 
-void CFex::TempWar(const char *pName)
+void CFex::TempWar(const char *pName, const char *pReason, bool Silent)
 {
-	CTempEntry Entry(pName, "", "");
-	str_copy(Entry.m_aTempWar, pName);
+	UnTempWar(pName, true); // Remove previous Reason
 
-	char aBuf[128];
-	str_format(aBuf, sizeof(aBuf), "Added \"%s\" to the Temp War List", pName);
-	GameClient()->aMessage(aBuf);
+	CTempEntry Entry(0, pName, pReason);
+	str_copy(Entry.m_aTempWar, pName);
+	str_copy(Entry.m_aReason, pReason);
 
 	m_TempEntries.push_back(Entry);
 	UnTempHelper(pName, true);
+
+	char aBuf[128];
+	str_format(aBuf, sizeof(aBuf), "Added \"%s\" to the Temp War List", pName, pReason);
+	if(!Silent)
+		GameClient()->aMessage(aBuf);
+
+	UpdateTempPlayers();
 }
 
-void CFex::UnTempWar(const char *pName, bool Silent)
+bool CFex::UnTempWar(const char *pName, bool Silent)
 {
-	if(str_comp(pName, "") == 0)
-		return;
+	bool Removed = false;
+
+	if(!str_comp(pName, ""))
+		return Removed;
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "couldn't find \"%s\" on the Temp War List", pName);
-	CTempEntry Entry("", "", pName);
+	CTempEntry Entry(0, pName, "");
 
 	auto it = std::find(m_TempEntries.begin(), m_TempEntries.end(), Entry);
 	if(it != m_TempEntries.end())
@@ -68,33 +76,44 @@ void CFex::UnTempWar(const char *pName, bool Silent)
 				++it2;
 
 			if(!str_comp(it2->m_aTempWar, pName))
+			{
 				str_format(aBuf, sizeof(aBuf), "Removed \"%s\" from the Temp War List", pName);
+				Removed = true;
+			}
 		}
 	}
 	if(!Silent)
 		GameClient()->aMessage(aBuf);
+	return Removed;
 }
 
-void CFex::TempHelper(const char *pName)
+void CFex::TempHelper(const char *pName, const char *pReason, bool Silent)
 {
-	CTempEntry Entry("", pName, "");
+	UnTempHelper(pName, true); // Remove previous Reason
+
+	CTempEntry Entry(1, pName, pReason);
 	str_copy(Entry.m_aTempHelper, pName);
+	str_copy(Entry.m_aReason, pReason);
+
+	m_TempEntries.push_back(Entry);
+	UnTempWar(pName, true);
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "Added \"%s\" to the Temp Helper List", pName);
-	GameClient()->aMessage(aBuf);
-	m_TempEntries.push_back(Entry);
-	UnTempWar(pName, true);
-}
+	if(!Silent)
+		GameClient()->aMessage(aBuf);
 
-void CFex::UnTempHelper(const char *pName, bool Silent)
+	UpdateTempPlayers();
+}
+bool CFex::UnTempHelper(const char *pName, bool Silent)
 {
-	if(str_comp(pName, "") == 0)
-		return;
+	bool Removed = false;
+	if(!str_comp(pName, ""))
+		return Removed;
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "couldn't find \"%s\" on the Temp Helper List", pName);
-	CTempEntry Entry("", "", pName);
+	CTempEntry Entry(1, pName, "");
 
 	auto it = std::find(m_TempEntries.begin(), m_TempEntries.end(), Entry);
 	if(it != m_TempEntries.end())
@@ -109,32 +128,41 @@ void CFex::UnTempHelper(const char *pName, bool Silent)
 				++it2;
 
 			if(!str_comp(it2->m_aTempHelper, pName))
+			{
 				str_format(aBuf, sizeof(aBuf), "Removed \"%s\" from the Temp Helper List", pName);
+				Removed = true;
+			}
 		}
 	}
 	if(!Silent)
 		GameClient()->aMessage(aBuf);
+	return Removed;
 }
 
-void CFex::TempMute(const char *pName)
+void CFex::TempMute(const char *pName, bool Silent)
 {
-	CTempEntry Entry("", "", pName);
+	CTempEntry Entry(2, pName, "");
 	str_copy(Entry.m_aTempMute, pName);
+
+	m_TempEntries.push_back(Entry);
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "Added \"%s\" to the Temp Mute List", pName);
-	GameClient()->aMessage(aBuf);
-	m_TempEntries.push_back(Entry);
-}
+	if(!Silent)
+		GameClient()->aMessage(aBuf);
 
-void CFex::UnTempMute(const char *pName, bool Silent)
+	UpdateTempPlayers();
+}
+bool CFex::UnTempMute(const char *pName, bool Silent)
 {
-	if(str_comp(pName, "") == 0)
-		return;
+	bool Removed = false;
+
+	if(!str_comp(pName, ""))
+		return Removed;
 
 	char aBuf[128];
 	str_format(aBuf, sizeof(aBuf), "couldn't find \"%s\" on the Temp Mute List", pName);
-	CTempEntry Entry("", "", pName);
+	CTempEntry Entry(2, pName, "");
 
 	auto it = std::find(m_TempEntries.begin(), m_TempEntries.end(), Entry);
 	if(it != m_TempEntries.end())
@@ -149,11 +177,15 @@ void CFex::UnTempMute(const char *pName, bool Silent)
 				++it2;
 
 			if(!str_comp(it2->m_aTempMute, pName))
+			{
 				str_format(aBuf, sizeof(aBuf), "Removed \"%s\" from the Temp Mute List", pName);
+				Removed = true;
+			}
 		}
 	}
 	if(!Silent)
 		GameClient()->aMessage(aBuf);
+	return Removed;
 }
 
 void CFex::RemoveWarEntryDuplicates(const char *pName)
@@ -172,14 +204,17 @@ void CFex::RemoveWarEntryDuplicates(const char *pName)
 		else
 			++it;
 	}
+	UpdateTempPlayers();
 }
 
-void CFex::RemoveWarEntry(const char *pNameW, const char *pNameH, const char *pNameM)
+void CFex::RemoveWarEntry(int Type, const char *pName)
 {
-	CTempEntry Entry(pNameW, pNameH, pNameM);
+	CTempEntry Entry(Type, pName, "");
 	auto it = std::find(m_TempEntries.begin(), m_TempEntries.end(), Entry);
 	if(it != m_TempEntries.end())
 		m_TempEntries.erase(it);
+
+	UpdateTempPlayers();
 }
 
 void CFex::UpdateTempPlayers()
@@ -192,15 +227,25 @@ void CFex::UpdateTempPlayers()
 		m_TempPlayers[i].IsTempWar = false;
 		m_TempPlayers[i].IsTempHelper = false;
 		m_TempPlayers[i].IsTempMute = false;
+		memset(m_TempPlayers[i].m_aReason, 0, sizeof(m_TempPlayers[i].m_aReason));
 
 		for(CTempEntry &Entry : m_TempEntries)
 		{
-			if(str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aTempWar) == 0 && str_comp(Entry.m_aTempWar, "") != 0)
+			if(!str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aTempWar) && str_comp(Entry.m_aTempWar, "") != 0)
+			{
+				str_copy(m_TempPlayers[i].m_aReason, Entry.m_aReason);
 				m_TempPlayers[i].IsTempWar = true;
-			if(str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aTempHelper) == 0 && str_comp(Entry.m_aTempHelper, "") != 0)
+			}
+			if(!str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aTempHelper) && str_comp(Entry.m_aTempHelper, "") != 0)
+			{
+				str_copy(m_TempPlayers[i].m_aReason, Entry.m_aReason);
 				m_TempPlayers[i].IsTempHelper = true;
-			if(str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aTempMute) == 0 && str_comp(Entry.m_aTempMute, "") != 0)
+			}
+			if(!str_comp(GameClient()->m_aClients[i].m_aName, Entry.m_aTempMute) && str_comp(Entry.m_aTempMute, "") != 0)
+			{
+				str_copy(m_TempPlayers[i].m_aReason, Entry.m_aReason);
 				m_TempPlayers[i].IsTempMute = true;
+			}
 		}
 	}
 }
@@ -370,10 +415,11 @@ void CFex::PlayerInfo(const char *pName)
 		GameClient()->aMessage(aBuf);
 }
 
+// Temp War Commands
 void CFex::ConTempWar(IConsole::IResult *pResult, void *pUserData)
 {
 	CFex *pSelf = (CFex *)pUserData;
-	pSelf->TempWar(pResult->GetString(0));
+	pSelf->TempWar(pResult->GetString(0), pResult->GetString(1));
 }
 void CFex::ConUnTempWar(IConsole::IResult *pResult, void *pUserData)
 {
@@ -381,17 +427,19 @@ void CFex::ConUnTempWar(IConsole::IResult *pResult, void *pUserData)
 	pSelf->UnTempWar(pResult->GetString(0));
 }
 
+// Temp Helper Commands
 void CFex::ConTempHelper(IConsole::IResult *pResult, void *pUserData)
 {
 	CFex *pSelf = (CFex *)pUserData;
-	pSelf->TempHelper(pResult->GetString(0));
+	pSelf->TempHelper(pResult->GetString(0), pResult->GetString(1));
 }
 void CFex::ConUnTempHelper(IConsole::IResult *pResult, void *pUserData)
 {
 	CFex *pSelf = (CFex *)pUserData;
-	pSelf->UnTempHelper(pResult->GetString(0) );
+	pSelf->UnTempHelper(pResult->GetString(0));
 }
 
+// Mute Commands
 void CFex::ConTempMute(IConsole::IResult *pResult, void *pUserData)
 {
 	CFex *pSelf = (CFex *)pUserData;
@@ -403,225 +451,7 @@ void CFex::ConUnTempMute(IConsole::IResult *pResult, void *pUserData)
 	pSelf->UnTempMute(pResult->GetString(0));
 }
 
-// void CFex::RandomizeName()
-// {
-//     static const char CHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-//     char aName[16];
-    
-//     for(int i = 0; i < 15; i++)
-//     {
-//         int randIndex = rand() % (sizeof(CHARS) - 1);
-//         aName[i] = CHARS[randIndex];
-//     }
-//     aName[15] = '\0';
 
-//     char aCommand[128];
-//     str_format(aCommand, sizeof(aCommand), "player_name \"%s\"", aName);
-//     Console()->ExecuteLine(aCommand);
-// }
-
-// void CFex::RestoreOriginalName()
-// {
-//     char aCommand[128];
-//     str_format(aCommand, sizeof(aCommand), "player_name \"%s\"", m_OriginalName);
-//     Console()->ExecuteLine(aCommand);
-// }
-
-// void CFex::SendAutoMessage()
-// {
-//     if(!m_AutoMessageEnabled)
-//         return;
-
-//     // Check cooldown
-//     if(time_get() < m_LastMessageTick + time_freq() * 6.5)
-//         return;
-
-//     // Check antimute protection
-//     if(m_MessageCount >= 5)
-//     {
-//         if(time_get() > m_MessageResetTick)
-//         {
-//             m_MessageCount = 0;
-//             m_MessageResetTick = time_get() + time_freq() * 10;
-//         }
-//         else
-//             return;
-//     }
-
-//     // Now handle message sending
-//     if(m_MessageTargets.empty())
-//         RefreshTargetList();
-
-//     if(!m_MessageTargets.empty())
-//     {
-//         if(str_comp(m_SingleTarget, "*all") == 0 && !m_IsWhisper)
-//         {
-//             char aBuf[512];
-//             char aNames[256] = "";
-            
-//             for(size_t i = 0; i < m_MessageTargets.size(); i++)
-//             {
-//                 const char* pName = GameClient()->m_aClients[m_MessageTargets[i]].m_aName;
-//                 if(i > 0)
-//                     str_append(aNames, ", ", sizeof(aNames));
-//                 str_append(aNames, pName, sizeof(aNames));
-//             }
-            
-//             str_format(aBuf, sizeof(aBuf), "%s || %s", aNames, m_CurrentMessage);
-//             GameClient()->m_Chat.SendChat(0, aBuf);
-//             RefreshTargetList();
-//         }
-//         else
-//         {
-//             char aBuf[512];
-//             const char* pTargetName = GameClient()->m_aClients[m_MessageTargets[m_CurrentTargetIndex]].m_aName;
-
-//             if(m_IsWhisper)
-//                 str_format(aBuf, sizeof(aBuf), "/w \"%s\" %s", pTargetName, m_CurrentMessage);
-//             else
-//                 str_format(aBuf, sizeof(aBuf), "%s: %s", pTargetName, m_CurrentMessage);
-
-//             GameClient()->m_Chat.SendChat(0, aBuf);
-//             m_CurrentTargetIndex = (m_CurrentTargetIndex + 1) % m_MessageTargets.size();
-//         }
-
-//         m_LastMessageTick = time_get();
-//         m_MessageCount++;
-//     }
-
-// 	if(m_IsRandomName)
-// 	{
-// 		if(!m_NameJustChanged)
-// 		{
-// 			RandomizeName();
-// 			m_LastNameChangeTick = time_get();
-// 			m_NameJustChanged = true;
-// 			return;
-// 		}
-
-// 		// Wait for name change to take effect
-// 		if(time_get() < m_LastNameChangeTick + time_freq() / 4) // Reduced to 0.25 second delay
-// 			return;
-
-// 		m_NameJustChanged = false;
-// 	}
-
-// }
-
-// void CFex::RefreshTargetList()
-// {
-//     m_MessageTargets.clear();
-
-//     // Single target mode
-//     if(str_comp(m_SingleTarget, "") != 0 && str_comp(m_SingleTarget, "*all") != 0)
-//     {
-//         int TargetID = IdWithName(m_SingleTarget);
-//         if(TargetID >= 0)
-//             m_MessageTargets.push_back(TargetID);
-//         return;
-//     }
-
-//     // Collect valid targets
-//     std::vector<int> validClients;
-//     for(int i = 0; i < MAX_CLIENTS; i++)
-//     {
-//         if(IsValidTarget(i))
-//             validClients.push_back(i);
-//     }
-
-//     // Random selection for *all mode with 15 targets
-//     if(str_comp(m_SingleTarget, "*all") == 0 && !m_IsWhisper)
-//     {
-//         while(m_MessageTargets.size() < std::min(15, (int)validClients.size()))
-//         {
-//             int randIndex = rand() % validClients.size();
-//             int clientId = validClients[randIndex];
-            
-//             if(std::find(m_MessageTargets.begin(), m_MessageTargets.end(), clientId) == m_MessageTargets.end())
-//                 m_MessageTargets.push_back(clientId);
-//         }
-//     }
-//     else
-//     {
-//         // Full list for whisper mode
-//         m_MessageTargets = validClients;
-//     }
-// }
-
-// bool CFex::IsValidTarget(int ClientID)
-// {
-//     if(!GameClient()->m_aClients[ClientID].m_Active)
-//         return false;
-
-//     if(ClientID == m_pClient->m_Snap.m_LocalClientId || ClientID == GameClient()->m_aLocalIds[1])
-//         return false;
-
-//     return true;
-// }
-
-// void CFex::ConAutoMessage(IConsole::IResult *pResult, void *pUserData)
-// {
-//     CFex *pSelf = (CFex *)pUserData;
-    
-//     // Toggle automessage
-//     pSelf->m_AutoMessageEnabled = !pSelf->m_AutoMessageEnabled;
-    
-//     if(pSelf->m_AutoMessageEnabled)
-//     {
-// 		str_copy(pSelf->m_OriginalName, 
-// 			pSelf->GameClient()->m_aClients[pSelf->m_pClient->m_Snap.m_LocalClientId].m_aName, 
-// 			sizeof(pSelf->m_OriginalName));
-//         str_copy(pSelf->m_SingleTarget, pResult->GetString(0), sizeof(pSelf->m_SingleTarget));
-//         str_copy(pSelf->m_CurrentMessage, pResult->GetString(1), sizeof(pSelf->m_CurrentMessage));
-//         pSelf->m_IsWhisper = pResult->GetInteger(2) == 1;
-// 		pSelf->m_IsRandomName = pResult->GetInteger(3) == 1;
-        
-//         pSelf->m_LastMessageTick = 0;
-//         pSelf->m_MessageCount = 0;
-//         pSelf->m_MessageResetTick = 0;
-//         pSelf->m_CurrentTargetIndex = 0;
-        
-//         pSelf->RefreshTargetList();
-        
-//         pSelf->GameClient()->aMessage("Auto message enabled");
-//     }
-//     else
-//     {
-// 		pSelf->RestoreOriginalName();
-//         pSelf->GameClient()->aMessage("Auto message disabled");
-//     }
-// }
-
-// void CFex::CheckAuthorizedPlayers()
-// {
-//     // Check only once per second
-//     if(time_get() < m_LastAuthCheck + time_freq())
-//         return;
-
-//     m_LastAuthCheck = time_get();
-
-//     // Check each client for auth level
-//     for(int i = 0; i < MAX_CLIENTS; i++)
-//     {
-//         if(!GameClient()->m_aClients[i].m_Active)
-//             continue;
-
-//         if(GameClient()->m_aClients[i].m_AuthLevel > 0)
-//         {
-//             // Found authorized player - disable auto message
-//             if(m_AutoMessageEnabled)
-//             {
-//                 m_AutoMessageEnabled = false;
-// 				RestoreOriginalName();
-//                 char aBuf[128];
-//                 str_format(aBuf, sizeof(aBuf), "Auto message disabled - Authorized player %s detected", 
-//                     GameClient()->m_aClients[i].m_aName);
-//                 GameClient()->aMessage(aBuf);
-//             }
-//             return;
-//         }
-//     }
-// }
 
 void CFex::OnRender()
 {
@@ -758,7 +588,6 @@ void CFex::OnRender()
     // Reset auto join flags when disconnected
     if(Client()->State() != IClient::STATE_ONLINE)
     {
-		// m_AutoMessageEnabled = false;
         // m_AutoJoinTeamAttempted = false;
         m_AutoJoinDummyAttempted = false;
         // m_AutoJoinTeamTick = 0;
@@ -766,7 +595,6 @@ void CFex::OnRender()
         m_ServerJustJoined = false;
 		m_OnAttemptingDummyJoin = false;
 		m_HasSwitchedBack = false;
-		// m_IsRandomName = false;
     }
 }
 

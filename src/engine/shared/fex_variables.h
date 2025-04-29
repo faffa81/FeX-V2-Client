@@ -291,7 +291,8 @@ MACRO_CONFIG_INT(ClStatusBarTextAlpha, fx_statusbar_text_alpha, 100, 0, 100, CFG
 MACRO_CONFIG_INT(ClStatusBarLabels, fx_statusbar_labels, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show labels on status bar entries")
 MACRO_CONFIG_STR(ClStatusBarScheme, fx_statusbar_scheme, 16, "ac pf r", CFGFLAG_CLIENT | CFGFLAG_SAVE, "The order in which to show status bar items")
 
-// TATER IS SAD :C
+
+
 MACRO_CONFIG_INT(ClAmIFrozen, EEEfrz, 0, 0, 1, CFGFLAG_CLIENT, "")
 
 
@@ -301,4 +302,8 @@ MACRO_CONFIG_INT(ClMenuTab, fx_menu_tab, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE,
 // Quick Actions
 MACRO_CONFIG_INT(ClShowQuickActions, fx_show_quick_actions, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show quick actions menu when spectating")
 
-MACRO_CONFIG_INT(ClShowNicknames, cl_show_nicknames, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show nicknames instead of real names")
+// Nameplates
+MACRO_CONFIG_INT(ClStrongWeakColorId, fx_strong_weak_color_id, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Render ClientIds in Nameplate Same Color as Strong/Weak Hook Color")
+
+// Inform Update
+MACRO_CONFIG_INT(ClUpdate, fx_update, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Inform with a github open link when a new update is available")
