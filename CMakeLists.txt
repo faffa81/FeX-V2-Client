@@ -10,6 +10,11 @@ file(STRINGS src/game/version.h VERSION_LINE
   REGEX "^#define GAME_RELEASE_VERSION "
 )
 
+file(STRINGS src/game/client/components/fex/fexversion.h FVERSION_LINE
+  LIMIT_COUNT 1
+  REGEX "^#define FEX_RELEASE_VERSION "
+)
+
 if(VERSION_LINE MATCHES "\"([0-9]+)\\.([0-9]+)\\.([0-9]+)\"")
   set(VERSION_MAJOR ${CMAKE_MATCH_1})
   set(VERSION_MINOR ${CMAKE_MATCH_2})
@@ -22,11 +27,24 @@ else()
   message(FATAL_ERROR "Couldn't parse version from src/game/version.h")
 endif()
 
-if(VERSION_PATCH STREQUAL "0")
-  project(DDNet VERSION ${VERSION_MAJOR}.${VERSION_MINOR})
+if(FVERSION_LINE MATCHES "\"([0-9]+)\\.([0-9]+)\\.([0-9]+)\"")
+  set(FVERSION_MAJOR ${CMAKE_MATCH_1})
+  set(FVERSION_MINOR ${CMAKE_MATCH_2})
+  set(FVERSION_PATCH ${CMAKE_MATCH_3})
+elseif(FVERSION_LINE MATCHES "\"([0-9]+)\\.([0-9]+)\"")
+  set(FVERSION_MAJOR ${CMAKE_MATCH_1})
+  set(FVERSION_MINOR ${CMAKE_MATCH_2})
+  set(FVERSION_PATCH "0")
 else()
-  project(DDNet VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+  message(FATAL_ERROR "Couldn't parse version from src/game/client/components/fex/fexversion.h")
 endif()
+
+if(VERSION_PATCH STREQUAL "0" AND FVERSION_PATCH STREQUAL "0")
+  project(FeX VERSION ${FVERSION_MAJOR}.${FVERSION_MINOR}.${VERSION_MAJOR}.${VERSION_MINOR})
+else()
+  project(FeX VERSION ${FVERSION_MAJOR}.${FVERSION_MINOR}.${FVERSION_PATCH}.${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
+endif()
+
 
 set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 set(ORIGINAL_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
@@ -574,6 +592,12 @@ message(STATUS ${TARGET})
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")
 message(STATUS "Rust version: ${RUST_VERSION_STRING}")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+if(VERSION_PATCH STREQUAL "0" AND FVERSION_PATCH STREQUAL "0")
+  message(STATUS "FeX&DDNet VERSION ${FVERSION_MAJOR}.${FVERSION_MINOR}-${VERSION_MAJOR}.${VERSION_MINOR}")
+else()
+  message(STATUS "FeX&DDNet VERSION ${FVERSION_MAJOR}.${FVERSION_MINOR}.${FVERSION_PATCH}-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+endif()
 
 message(STATUS "Dependencies:")
 function(show_dependency_status OUTPUT_NAME NAME)

@@ -632,7 +632,6 @@ void CFex::OnConsoleInit()
 	Console()->Register("addtempmute", "s[name] ?r[reason]", CFGFLAG_CLIENT, ConTempMute, this, "temporary Mute");
 	Console()->Register("deltempmute", "s[name]", CFGFLAG_CLIENT, ConUnTempMute, this, "remove temporary Mute");
 
-	// Console()->Register("amsg", "s[name] s[msg] i[whisper] i[randomize name]", CFGFLAG_CLIENT, ConAutoMessage, this, "Auto message to players *all for everyone");
 }
 void CFex::OnInit()
 {
