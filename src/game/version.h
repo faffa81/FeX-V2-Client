@@ -15,5 +15,5 @@
 // ddnet
 #define DDNET_VERSION_NUMBER 19020
 extern const char *GIT_SHORTREV_HASH;
-#define GAME_NAME "DDraceNetwork"
+#define GAME_NAME "DDNet"
 #endif

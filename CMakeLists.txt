@@ -2399,6 +2399,8 @@ if(CLIENT)
     components/fex/fexstatusbar.h
     components/fex/fextrails.cpp
     components/fex/fextrails.h
+    components/fex/fexupdater.cpp
+    components/fex/fexupdater.h
     components/fex/fexversion.h
     components/fex/fexvisual.cpp
     components/fex/fexvisual.h

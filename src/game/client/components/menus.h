@@ -36,6 +36,10 @@
 
 static constexpr const char *DEFAULT_SAVED_RCON_USER = "local-server";
 
+#define CONFIG_FILE_PREFIX "settings_ddnet"
+#define CONFIG_FILE "settings_ddnet.cfg"
+#define FEX_CONFIG_FILE_PREFIX "settings_fex"
+#define FEX_CONFIG_FILE "settings_fex.cfg"
 struct CServerProcess
 {
 #if !defined(CONF_PLATFORM_ANDROID)
@@ -78,7 +82,12 @@ class CMenus : public CComponent
 	static ColorRGBA ms_ColorTabbarActive;
 	static ColorRGBA ms_ColorTabbarHover;
 
+	static ColorRGBA ms_ColorFexTabbarInactive;
+	static ColorRGBA ms_ColorFexTabbarActive;
+	static ColorRGBA ms_ColorFexTabbarHover;
+
 	int DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true);
+	int DoButton_FontIconColor(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners = IGraphics::CORNER_ALL, bool Enabled = true, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
 	int DoButton_Toggle(const void *pId, int Checked, const CUIRect *pRect, bool Active, const unsigned Flags = BUTTONFLAG_LEFT);
 	int DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags = BUTTONFLAG_LEFT, const char *pImageName = nullptr, int Corners = IGraphics::CORNER_ALL, float Rounding = 5.0f, float FontFactor = 0.0f, ColorRGBA Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f));
 	int DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, int Corners, SUIAnimator *pAnimator = nullptr, const ColorRGBA *pDefaultColor = nullptr, const ColorRGBA *pActiveColor = nullptr, const ColorRGBA *pHoverColor = nullptr, float EdgeRounding = 10.0f, const SCommunityIcon *pCommunityIcon = nullptr);
@@ -464,6 +473,7 @@ protected:
 	void PopupConfirmDemoReplaceVideo();
 #endif
 	void RenderMenubar(CUIRect Box, IClient::EClientState ClientState);
+	void RenderCenteredLabel(const char *pTitle, const char *pText);
 	void RenderNews(CUIRect MainView);
 	static void ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
 	static void ConchainUpdateMusicState(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData);
@@ -672,11 +682,27 @@ public:
 
 	static CMenusKeyBinder m_Binder;
 
+	enum EFadeState { FADE_IN, WAIT, FADE_OUT, DONE };
+    EFadeState m_FadeState;
+    float m_FadeAlpha;
+    int64_t m_FadeStateStartTime;
+
 	CMenus();
+
+	bool FadeLoadingDone() const { return m_FadeState == DONE; }
+    void ResetFadeLoading() {
+        m_FadeState = FADE_IN;
+        m_FadeAlpha = 0.0f;
+        m_FadeStateStartTime = time_get();
+    }
+    void RenderFadeLoadingScreen();
+
 	virtual int Sizeof() const override { return sizeof(*this); }
 
 	void RenderLoading(const char *pCaption, const char *pContent, int IncreaseCounter);
 	void FinishLoading();
+
+	bool m_CustomLoadingActive;
 
 	bool IsInit() { return m_IsInit; }
 
@@ -863,6 +889,8 @@ private:
 public:
 
 	void RenderSettingsFeX(CUIRect MainView);
+	void RenderFex(CUIRect MainView, int CurPage);
+	void RenderVisualFex(CUIRect MainView);
 	void RenderSettingsProfiles(CUIRect MainView);
 	void RenderChatPreview(CUIRect MainView);
 	void RenderSettingsWarList(CUIRect MainView);
@@ -880,6 +908,42 @@ public:
 
 	void RenderSettingsBindWheel(CUIRect MainView);
 
+	void RenderBar(CUIRect MainView);
+	void RenderPlayerPanelTopRight(const CUIRect &MainView);
+	// static int FindOldNumCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
+	// int FindNextAvailableOldNumber(bool IsFexConfig);
+	// void BackupActiveConfigOnJoin(bool IsFexConfig);
+	// bool isfex;
+	// struct SOldNumCallbackUserdata
+	// {
+	// 	const char *m_pPrefix;
+	// 	int m_MaxNumFound;
+	// };
+	bool m_MenuTabInitialized = false;
+
+	// Config Profile Management
+	std::vector<std::string> m_vSavedDdnetConfigs;
+	std::vector<std::string> m_vSavedFexConfigs;
+	std::vector<const char *> m_vpSavedDdnetConfigsPtr; // For DoDropDown
+	std::vector<const char *> m_vpSavedFexConfigsPtr;   // For DoDropDown
+	int m_SelectedDdnetConfig;
+	int m_SelectedFexConfig;
+	bool m_NeedConfigListUpdate;
+	char m_aConfigToDelete[IO_MAX_PATH_LENGTH];
+	bool m_ConfigToDeleteIsFex;
+	char m_aConfigToLoad[IO_MAX_PATH_LENGTH];
+	bool m_ConfigToLoadIsFex;
+
+	void SaveCurrentConfig(bool IsFexConfig);
+	void LoadConfig(const char *pSaveFilename, bool IsFexConfig);
+	void DeleteSavedConfig(const char *pSaveFilename, bool IsFexConfig);
+	void ListSavedConfigs(bool IsFexConfig);
+	static int ConfigListFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
+	void PopupConfirmDeleteConfig();
+	void PopupConfirmLoadConfig();
+	void GetSaveDirectoryPath(bool IsFexConfig, char* pBuffer, int BufferSize);
+
 	CServerProcess m_ServerProcess;
+	IServerBrowser *m_pServerBrowser;
 };
 #endif

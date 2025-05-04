@@ -72,6 +72,7 @@
 #include "components/fex/fexvisual.h"
 
 #include "components/fex/update.h"
+#include "components/fex/fexupdater.h"
 
 #include <vector>
 #include "components/fex/fextrails.h"
@@ -128,6 +129,7 @@ public:
 	bool m_DDRaceTeam;
 };
 
+
 class CSnapEntities
 {
 public:
@@ -156,21 +158,19 @@ protected:
     
 
 public:
-
 	// FeX 1v1
-
 	bool m_1v1KillLocked;
 	int m_1v1EnemyScore;
 	int m_1v1PlayerScore;
 	static constexpr int64_t SCORE_COOLDOWN = 1000000000; // 1000ms in microseconds
-	static constexpr int64_t CHAT_MESSAGE_COOLDOWN = 2500000000; // 1000ms in microseconds
     int64_t m_1v1LastScoreTime;
-	int64_t m_1v1LastChatTime;
 	bool m_1v1LastScorePlayer = false;
 
-	
+	mutable int m_LifetimeKills;
+	mutable int64_t m_LastKillTime;
 
 	// fex components
+	CFexUpdater m_FexUpdater;
 	CFex m_Fex;
 	CBindchat m_Bindchat;
 	CSkinProfiles m_SkinProfiles;
@@ -650,6 +650,7 @@ public:
 	void OnDummyDisconnect() override;
 	virtual void OnRelease();
 	void OnInit() override;
+	void ParseTeamModeSplits();
 	static void ConAddPlayerScore(IConsole::IResult *pResult, void *pUserData);
 	static void ConDrawScore(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveScore(IConsole::IResult *pResult, void *pUserData);

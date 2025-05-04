@@ -10,6 +10,7 @@
 
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
+#include <game/client/ui_scrollregion.h>
 
 #include <game/generated/client_data.h>
 #include <game/localization.h>
@@ -39,17 +40,59 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 
 	const float Rounding = 10.0f;
 	const float VMargin = MainView.w / 2 - 190.0f;
+	const float VFrames = MainView.w / 2 - 200.0f;
+
+	float screenAspect = Graphics()->ScreenAspect();
+    const float designWidth = 1280.0f;
+    const float designHeight = designWidth / screenAspect;
+    
+    const float baseHeight = 720.0f;
+    float scale = designHeight / baseHeight;
+
+	ColorRGBA Color = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
+	ColorRGBA TextColor = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
+	int Theme = g_Config.m_ClStartMenuTheme;
+	if(Theme == 1) // Dark
+	{
+		Color = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f);
+		TextColor = ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
+	}
+	else if(Theme == 2) // Light
+	{
+		Color = ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f);
+		TextColor = ColorRGBA(0.0f, 0.0f, 0.0f, 1.0f);
+	}
+	else if(Theme == 3) // Custom
+	{
+		Color = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClStartMenuColor));
+		TextColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClStartMenuTextColor));
+	}
+
+	ColorRGBA ColorA = ColorRGBA(Color.r,Color.g,Color.b,Color.a = 0.25f);
 
 	CUIRect Button;
 	int NewPage = -1;
 
-	CUIRect ExtMenu;
-	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
-	ExtMenu.VSplitLeft(100.0f, &ExtMenu, nullptr);
+	RenderBar(MainView);
+	RenderPlayerPanelTopRight(MainView);
 
+	CUIRect ExtMenu, ExtMenuFrame;
+	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
+	MainView.VSplitLeft(30.0f, nullptr, &ExtMenuFrame);
+	ExtMenu.VSplitLeft(100.0f, &ExtMenu, nullptr);
+	ExtMenuFrame.VSplitLeft(100.0f, &ExtMenuFrame, nullptr);
+	ExtMenuFrame.VMargin(-5.25f, &ExtMenuFrame);
+	ExtMenuFrame.HSplitBottom(125.0f, nullptr, &ExtMenuFrame);
+	ExtMenuFrame.HSplitBottom(-5.0f, &ExtMenuFrame, nullptr);
+	if(g_Config.m_ClStartMenuFrames)
+	{
+		ExtMenuFrame.Draw(ColorA, IGraphics::CORNER_ALL, Rounding / scale);
+	}
+
+	TextRender()->TextColor(TextColor);
 	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_DiscordButton;
-	if(DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButton_Menu(&s_DiscordButton, Localize("Discord"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))
 	{
 		Client()->ViewLink(Localize("https://ddnet.org/discord"));
 	}
@@ -57,7 +100,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
 	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_LearnButton;
-	if(DoButton_Menu(&s_LearnButton, Localize("Learn"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButton_Menu(&s_LearnButton, Localize("Learn"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))
 	{
 		Client()->ViewLink(Localize("https://wiki.ddnet.org/"));
 	}
@@ -66,7 +109,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_TutorialButton;
 	static float s_JoinTutorialTime = 0.0f;
-	if(DoButton_Menu(&s_TutorialButton, Localize("Tutorial"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) ||
+	if(DoButton_Menu(&s_TutorialButton, Localize("Tutorial"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA) ||
 		(s_JoinTutorialTime != 0.0f && Client()->LocalTime() >= s_JoinTutorialTime))
 	{
 		// Activate internet tab before joining tutorial to make sure the server info
@@ -94,7 +137,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
 	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_WebsiteButton;
-	if(DoButton_Menu(&s_WebsiteButton, Localize("Website"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButton_Menu(&s_WebsiteButton, Localize("Website"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))
 	{
 		Client()->ViewLink("https://ddnet.org/");
 	}
@@ -102,17 +145,28 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
 	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
 	static CButtonContainer s_NewsButton;
-	if(DoButton_Menu(&s_NewsButton, Localize("News"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_N))
+	if(DoButton_Menu(&s_NewsButton, Localize("News"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorA) || CheckHotKey(KEY_N))
 		NewPage = PAGE_NEWS;
 
-	CUIRect Menu;
+	CUIRect Menu, MenuFrame, MenuFrameDown;
 	MainView.VMargin(VMargin, &Menu);
+	MainView.VMargin(VFrames, &MenuFrame);
+	MainView.VMargin(VFrames, &MenuFrameDown);
 	Menu.HSplitBottom(25.0f, &Menu, nullptr);
+	MenuFrame.HSplitTop(180.0f, nullptr, &MenuFrame);
+	MenuFrame.HSplitBottom(150.0f, &MenuFrame, nullptr);
+	MenuFrameDown.HSplitBottom(75.0f, nullptr, &MenuFrameDown);
+	MenuFrameDown.HSplitTop(60.0f, &MenuFrameDown, nullptr);
+	if(g_Config.m_ClStartMenuFrames)
+	{
+		MenuFrame.Draw(ColorA, IGraphics::CORNER_ALL, Rounding / scale);
+		MenuFrameDown.Draw(ColorA, IGraphics::CORNER_ALL, Rounding / scale);
+	}
 
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_QuitButton;
 	bool UsedEscape = false;
-	if(DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
+	if(DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, ColorA) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
 	{
 		if(UsedEscape || m_pClient->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0))
 		{
@@ -127,7 +181,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Menu.HSplitBottom(100.0f, &Menu, nullptr);
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_SettingsButton;
-	if(DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "settings" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_S))
+	if(DoButton_Menu(&s_SettingsButton, Localize("Settings"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "settings" : nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, ColorA) || CheckHotKey(KEY_S))
 		NewPage = PAGE_SETTINGS;
 
 	Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
@@ -139,7 +193,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 		KillServer();
 #endif
 
-	if(DoButton_Menu(&s_LocalServerButton, IsServerRunning() ? Localize("Stop server") : Localize("Run server"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, IsServerRunning() ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+	if(DoButton_Menu(&s_LocalServerButton, IsServerRunning() ? Localize("Stop server") : Localize("Run server"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "local_server" : nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, IsServerRunning() ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorA) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
 	{
 		if(IsServerRunning())
 		{
@@ -161,7 +215,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_MapEditorButton;
-	if(DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, m_pClient->Editor()->HasUnsavedData() ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_E))
+	if(DoButton_Menu(&s_MapEditorButton, Localize("Editor"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "editor" : nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, m_pClient->Editor()->HasUnsavedData() ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorA) || CheckHotKey(KEY_E))
 	{
 		g_Config.m_ClEditor = 1;
 		Input()->MouseModeRelative();
@@ -170,7 +224,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_DemoButton;
-	if(DoButton_Menu(&s_DemoButton, Localize("Demos"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "demos" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || CheckHotKey(KEY_D))
+	if(DoButton_Menu(&s_DemoButton, Localize("Demos"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "demos" : nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, ColorA) || CheckHotKey(KEY_D))
 	{
 		NewPage = PAGE_DEMOS;
 	}
@@ -178,30 +232,47 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Menu.HSplitBottom(5.0f, &Menu, nullptr); // little space
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_PlayButton;
-	if(DoButton_Menu(&s_PlayButton, Localize("Play", "Start menu"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "play_game" : nullptr, IGraphics::CORNER_ALL, Rounding, 0.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || CheckHotKey(KEY_P))
+	if(DoButton_Menu(&s_PlayButton, Localize("Play", "Start menu"), 0, &Button, BUTTONFLAG_LEFT, g_Config.m_ClShowStartMenuImages ? "play_game" : nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, ColorA) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || CheckHotKey(KEY_P))
 	{
 		NewPage = g_Config.m_UiPage >= PAGE_INTERNET && g_Config.m_UiPage <= PAGE_FAVORITE_COMMUNITY_5 ? g_Config.m_UiPage : PAGE_INTERNET;
 	}
 
 	// render version
-	CUIRect CurVersion, ConsoleButton, FEXVersion;
-	MainView.HSplitBottom(45.0f, nullptr, &CurVersion);
-	CurVersion.VSplitRight(40.0f, &CurVersion, &FEXVersion);
-	FEXVersion.HSplitTop(20.0f, &ConsoleButton, &FEXVersion);
-	FEXVersion.HSplitTop(5.0f, &CurVersion, &FEXVersion);
-	CurVersion.HSplitTop(5.0f, nullptr, &CurVersion);
-	ConsoleButton.VSplitRight(40.0f, nullptr, &ConsoleButton);
+	CUIRect CurVersion, ConsoleButton, VersionFrame, VersionButton;
+	MainView.HSplitBottom(45.0f / scale, nullptr, &CurVersion);
+	MainView.HSplitBottom(45.0f / scale, nullptr, &VersionFrame);
+	VersionFrame.VSplitRight(38.0f / scale, &VersionFrame, nullptr);
+	VersionFrame.VSplitRight(160.0f / scale, nullptr, &VersionFrame);
+	VersionFrame.VMargin(-5.5f / scale, &VersionFrame);
+	VersionFrame.HSplitBottom(54.5f / scale, nullptr, &VersionFrame);
+	VersionFrame.HSplitBottom(-5.5f / scale, &VersionFrame, nullptr);
+	if(g_Config.m_ClStartMenuFrames)
+	{
+		VersionFrame.Draw(ColorA, IGraphics::CORNER_ALL, Rounding / scale);
+	}
+	CurVersion.VSplitRight(40.0f / scale, &CurVersion, nullptr);
+	CurVersion.HSplitTop(20.0f / scale, &ConsoleButton, &CurVersion);
+	CurVersion.HSplitTop(5.0f / scale, nullptr, &CurVersion);
+
+	ConsoleButton.VSplitRight(40.0f / scale, &VersionButton, &ConsoleButton);
+	VersionButton.VSplitRight(10.0f / scale, &VersionButton, nullptr);
+	VersionButton.VSplitRight(107.5f / scale, nullptr, &VersionButton);
+
+
 	char DDNETRL[128];
-	char FEXRL[128];
-	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s: %s"), GAME_NAME, GAME_RELEASE_VERSION);
-	str_format(FEXRL, sizeof(FEXRL), Localize("%s: %s"), CLIENT_NAME, FEX_RELEASE_VERSION);
-	Ui()->DoLabel(&CurVersion, DDNETRL, 20.0f, TEXTALIGN_MR);
-	Ui()->DoLabel(&FEXVersion, FEXRL, 17.0f, TEXTALIGN_MR);
+	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s | %s: %s"), CLIENT_NAME, GAME_NAME, GAME_RELEASE_VERSION);
+	Ui()->DoLabel(&CurVersion, DDNETRL, 15.0f / scale, TEXTALIGN_MR);
+
+	static CButtonContainer s_VersionButton;
+	if(DoButton_Menu(&s_VersionButton, Localize("FeX Versions"), 0, &VersionButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))
+	{
+		Client()->ViewLink("https://github.com/faffa81/FeX-V2-Client/releases/");
+	}
 
 	static CButtonContainer s_ConsoleButton;
 	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-	if(DoButton_Menu(&s_ConsoleButton, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.1f)))
+	if(DoButton_Menu(&s_ConsoleButton, FONT_ICON_TERMINAL, 0, &ConsoleButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))
 	{
 		GameClient()->m_GameConsole.Toggle(CGameConsole::CONSOLETYPE_LOCAL);
 	}
@@ -209,8 +280,8 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 
 	CUIRect VersionUpdate;
-	MainView.HSplitBottom(20.0f, nullptr, &VersionUpdate);
-	VersionUpdate.VMargin(VMargin, &VersionUpdate);
+	MainView.HSplitBottom(15.0f, nullptr, &VersionUpdate);
+	VersionUpdate.VMargin(VMargin * scale, &VersionUpdate);
 #if defined(CONF_AUTOUPDATE)
 	CUIRect UpdateButton;
 	VersionUpdate.VSplitRight(100.0f, &VersionUpdate, &UpdateButton);
@@ -223,7 +294,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	if(State == IUpdater::CLEAN && NeedUpdate)
 	{
 		static CButtonContainer s_VersionUpdate;
-		if(DoButton_Menu(&s_VersionUpdate, Localize("Update now"), 0, &UpdateButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		if(DoButton_Menu(&s_VersionUpdate, Localize("Update now"), 0, &UpdateButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
 		{
 			Updater()->InitiateUpdate();
 		}
@@ -231,7 +302,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	else if(State == IUpdater::NEED_RESTART)
 	{
 		static CButtonContainer s_VersionUpdate;
-		if(DoButton_Menu(&s_VersionUpdate, Localize("Restart"), 0, &UpdateButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+		if(DoButton_Menu(&s_VersionUpdate, Localize("Restart"), 0, &UpdateButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
 		{
 			Client()->Restart();
 		}
@@ -264,21 +335,35 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	else if(State == IUpdater::NEED_RESTART)
 	{
 		str_copy(aBuf, Localize("DDNet Client updated!"));
-		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
+		TextRender()->TextColor(TextColor);
 	}
 	Ui()->DoLabel(&VersionUpdate, aBuf, 14.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 #endif
 	if(str_comp(GameClient()->m_Update.m_aVersionStr, "0") != 0)
 	{
+		// Split VersionUpdate into two halves.
+		// CUIRect ManualButton, AutoButton;
+		// VersionUpdate.VSplitMid(&ManualButton, &AutoButton);
+
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), Localize("FeX v%s is out!"), GameClient()->m_Update.m_aVersionStr);
-		TextRender()->TextColor(TextRender()->DefaultTextColor());
-		static CButtonContainer s_VersionUpdate;
-		if(DoButton_Menu(&s_VersionUpdate, Localize(aBuf), 0, &VersionUpdate, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+
+		// Left button: Manual download.
+		static CButtonContainer s_ManualUpdate;
+		if(DoButton_Menu(&s_ManualUpdate, Localize(aBuf), 0, &VersionUpdate, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
 		{
+			// Open the GitHub release page
 			Client()->ViewLink("https://github.com/faffa81/FeX-V2-Client/releases/latest");
 		}
+
+		// Right button: Auto Update.
+		// static CButtonContainer s_AutoUpdate;
+		// if(DoButton_Menu(&s_AutoUpdate, Localize("Auto Update"), 0, &AutoButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
+		// {
+		// 	// Start the auto updater.
+		// 	GameClient()->m_FexUpdater.InitiateUpdate();
+		// }
 	}
 
 	if(NewPage != -1)
@@ -286,6 +371,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 		m_ShowStart = false;
 		SetMenuPage(NewPage);
 	}
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }
 
 void CMenus::RunServer(const char **ppArguments, const size_t NumArguments)

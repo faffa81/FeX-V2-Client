@@ -664,6 +664,7 @@ void CMenus::Connect(const char *pAddress)
 void CMenus::PopupConfirmSwitchServer()
 {
 	Client()->Connect(m_aNextServer);
+	
 }
 
 void CMenus::RenderServerbrowserFilters(CUIRect View)
@@ -1686,37 +1687,6 @@ void CMenus::RenderServerbrowserFriends(CUIRect View)
 	}
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 void CMenus::RenderServerbrowserWars(CUIRect View)
 {
     const float FontSize = 10.0f;
@@ -2078,20 +2048,23 @@ void CMenus::RenderWarListAddSection(CUIRect View)
 	// Add button
 	View.HSplitTop(Spacing, nullptr, &View);
 	View.HSplitTop(ButtonHeight, &Button, &View);
+	const char* pWarType;
+	switch(s_SelectedType)
+	{
+		case 0: pWarType = "enemy"; break; // War type
+		case 1: pWarType = "team"; break;  // Team type
+		case 2: pWarType = "helper"; break; // Helper type
+		default: pWarType = "enemy"; break; // Default to enemy
+	}
+	char clanaBuf[64];
+	str_format(clanaBuf, sizeof(clanaBuf), "%s %s", Localize("Add Clan"), pWarType);
+	char nameaBuf[64];
+	str_format(nameaBuf, sizeof(nameaBuf), "%s %s", Localize("Add"), pWarType);
 
 	if(DoButton_Menu(&s_AddButton, 
 		s_NameInput.IsEmpty() && !s_ClanInput.IsEmpty() ? 
-		Localize("Add Clan War") : Localize("Add War"), 0, &Button))
+		clanaBuf : nameaBuf, 0, &Button))
 	{
-		const char* pWarType;
-		switch(s_SelectedType)
-		{
-			case 0: pWarType = "enemy"; break; // War type
-			case 1: pWarType = "team"; break;  // Team type
-			case 2: pWarType = "helper"; break; // Helper type
-			default: pWarType = "enemy";
-		}
-
 		GameClient()->m_WarList.AddWarEntry(
 			s_NameInput.GetString(),
 			s_ClanInput.GetString(),
@@ -2105,39 +2078,6 @@ void CMenus::RenderWarListAddSection(CUIRect View)
 		Client()->ServerBrowserUpdate();
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 void CMenus::FriendlistOnUpdate()
 {

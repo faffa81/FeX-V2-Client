@@ -773,6 +773,7 @@ public:
 		bool m_Init = false;
 	};
 	int DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State);
+	int DoDropDownColor(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State, ColorRGBA ColorRect = ColorRGBA(0.7f, 0.7f, 0.7f, 0.9f), ColorRGBA ColorBorder = ColorRGBA(0.7f, 0.7f, 0.7f, 0.9f), ColorRGBA ColorBackground = ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f));
 };
 
 #endif

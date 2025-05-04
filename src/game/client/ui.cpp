@@ -1911,6 +1911,55 @@ int CUi::DoDropDown(CUIRect *pRect, int CurSelection, const char **pStrs, int Nu
 	return CurSelection;
 }
 
+int CUi::DoDropDownColor(CUIRect *pRect, int CurSelection, const char **pStrs, int Num, SDropDownState &State, ColorRGBA ColorRect, ColorRGBA ColorBorder, ColorRGBA ColorBackground)
+{
+	if(!State.m_Init)
+	{
+		State.m_UiElement.Init(this, -1);
+		State.m_Init = true;
+	}
+
+	const auto LabelFunc = [CurSelection, pStrs]() {
+		return CurSelection > -1 ? pStrs[CurSelection] : "";
+	};
+
+	SMenuButtonProperties Props;
+	Props.m_HintRequiresStringCheck = true;
+	Props.m_HintCanChangePositionOrSize = true;
+	Props.m_ShowDropDownIcon = true;
+	Props.m_Color = ColorRGBA(ColorRect);
+	if(IsPopupOpen(&State.m_SelectionPopupContext))
+	{
+		Props.m_Corners = IGraphics::CORNER_ALL & (~State.m_SelectionPopupContext.m_Props.m_Corners);
+		Props.m_Color = ColorRGBA(ColorRect);
+	}
+	if(DoButton_Menu(State.m_UiElement, &State.m_ButtonContainer, LabelFunc, pRect, Props))
+	{
+		Props.m_Color = ColorRGBA(ColorRect);
+		State.m_SelectionPopupContext.Reset();
+		State.m_SelectionPopupContext.m_Props.m_BorderColor = ColorRGBA(ColorBorder);
+		State.m_SelectionPopupContext.m_Props.m_BackgroundColor = ColorRGBA(ColorBackground);
+		for(int i = 0; i < Num; ++i)
+			State.m_SelectionPopupContext.m_vEntries.emplace_back(pStrs[i]);
+		State.m_SelectionPopupContext.m_EntryHeight = pRect->h;
+		State.m_SelectionPopupContext.m_EntryPadding = pRect->h >= 20.0f ? 2.0f : 1.0f;
+		State.m_SelectionPopupContext.m_FontSize = (State.m_SelectionPopupContext.m_EntryHeight - 2 * State.m_SelectionPopupContext.m_EntryPadding) * CUi::ms_FontmodHeight;
+		State.m_SelectionPopupContext.m_Width = pRect->w;
+		State.m_SelectionPopupContext.m_AlignmentHeight = pRect->h;
+		State.m_SelectionPopupContext.m_TransparentButtons = true;
+		ShowPopupSelection(pRect->x, pRect->y, &State.m_SelectionPopupContext);
+	}
+
+	if(State.m_SelectionPopupContext.m_SelectionIndex >= 0)
+	{
+		const int NewSelection = State.m_SelectionPopupContext.m_SelectionIndex;
+		State.m_SelectionPopupContext.Reset();
+		return NewSelection;
+	}
+
+	return CurSelection;
+}
+
 CUi::EPopupMenuFunctionResult CUi::PopupColorPicker(void *pContext, CUIRect View, bool Active)
 {
 	SColorPickerPopupContext *pColorPicker = static_cast<SColorPickerPopupContext *>(pContext);

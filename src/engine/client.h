@@ -57,6 +57,7 @@ public:
 		STATE_DEMOPLAYBACK,
 		STATE_QUITTING,
 		STATE_RESTARTING,
+		STATE_RESTARTING_NOSAVE,
 	};
 
 	/**
@@ -173,6 +174,7 @@ public:
 	virtual bool DummyAllowed() const = 0;
 
 	virtual void Restart() = 0;
+	virtual void RestartWithoutSave() = 0;
 	virtual void Quit() = 0;
 	virtual const char *DemoPlayer_Play(const char *pFilename, int StorageType) = 0;
 #if defined(CONF_VIDEORECORDER)

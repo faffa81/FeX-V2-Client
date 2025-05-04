@@ -171,6 +171,7 @@ MACRO_CONFIG_INT(Cl1v1ModeHudColor, fx_1v1mode_color, 0, 0, 1, CFGFLAG_CLIENT | 
 MACRO_CONFIG_INT(Cl1v1ModeCustom, fx_1v1mode_custom, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Toggles custom message for 1v1")
 MACRO_CONFIG_STR(Cl1v1ModeCustomMsg, fx_1v1mode_custom_msg, 128, "%s %d | %d %s", CFGFLAG_CLIENT | CFGFLAG_SAVE, "usage: %|s %|d | %|d %|s, remove the | by % but in the middle you can leave")
 
+MACRO_CONFIG_STR(Cl1v1TeamModeSplits, fx_1v1team_mode_splits, 64, "1v1", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Team mode split configuration (ex: \"1v1\", \"1v1v1\", \"2v2\", \"2v3\" etc)")
 
 // FeX Clone
 MACRO_CONFIG_INT(ClAlreadyCloned, zzzzzzjwebgfuwhbfuewhuif______, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "DO NOT TOUCH!")
@@ -297,13 +298,37 @@ MACRO_CONFIG_INT(ClAmIFrozen, EEEfrz, 0, 0, 1, CFGFLAG_CLIENT, "")
 
 
 // FeX Menus:
-MACRO_CONFIG_INT(ClMenuTab, fx_menu_tab, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Save and load the current menu tab")
-
-// Quick Actions
-MACRO_CONFIG_INT(ClShowQuickActions, fx_show_quick_actions, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show quick actions menu when spectating")
+MACRO_CONFIG_INT(ClMenuTab, fx_menu_tab, 1, 1, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Save and load the current menu tab")
 
 // Nameplates
 MACRO_CONFIG_INT(ClStrongWeakColorId, fx_strong_weak_color_id, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Render ClientIds in Nameplate Same Color as Strong/Weak Hook Color")
 
 // Inform Update
 MACRO_CONFIG_INT(ClUpdate, fx_update, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Inform with a github open link when a new update is available")
+
+// FeX First Launch
+MACRO_CONFIG_INT(ClFirstLaunch, fx_first_launch, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "First launch of the client")
+
+// FeX Stored Servers
+MACRO_CONFIG_STR(UiLastJoinedServer, fx_last_joined_server, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last joined server")
+MACRO_CONFIG_STR(UiStoredServer1, fx_stored_server_1, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Stored joined server 1")
+MACRO_CONFIG_STR(UiStoredServer2, fx_stored_server_2, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Stored joined server 2")
+MACRO_CONFIG_STR(UiStoredServer3, fx_stored_server_3, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Stored joined server 3")
+MACRO_CONFIG_STR(UiStoredServer4, fx_stored_server_4, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Stored joined server 4")
+
+// FeX Solo Hud
+MACRO_CONFIG_INT(ClSoloHud, fx_solo_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show solo/unsolo in a hud instead of showing as servermessage")
+
+MACRO_CONFIG_STR(UiStatusLabelFormat, fx_label_format, 128, "Ping: %d ms, Clients: %d, Wars: %d, Teams: %d, Helper: %d, Other: %d", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Format for displaying server status in the Start Menu");
+
+MACRO_CONFIG_INT(LifetimeTime, fx_life_time_time, 0, 0, 100000000000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Total lifetime play time in seconds");
+MACRO_CONFIG_INT(LifetimeKills, fx_life_time_kills, 0, 0, 100000000000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Total lifetime kill count");
+
+// FeX Start Menu
+MACRO_CONFIG_INT(ClStartMenuFrames, fx_start_menu_frames, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Frames of the start menu")
+MACRO_CONFIG_INT(ClStartMenuInfo, fx_start_menu_info, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Player Info in the start menu")
+MACRO_CONFIG_INT(ClStartMenuTheme, fx_start_menu_theme, 1, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Theme of the start menu (1: Dark(Default), 2: White, 3: Custom)")
+MACRO_CONFIG_COL(ClStartMenuColor, fx_start_menu_color, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom color of the start menu")
+MACRO_CONFIG_COL(ClStartMenuTextColor, fx_start_menu_text_color, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom text color of the start menu")
+
+MACRO_CONFIG_INT(ClCustomLoadingScreen, fx_custom_loading, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show custom loading screen");

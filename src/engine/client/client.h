@@ -358,6 +358,8 @@ public:
 	void RenderDebug();
 	void RenderGraphs();
 
+
+	void RestartWithoutSave() override;
 	void Restart() override;
 	void Quit() override;
 

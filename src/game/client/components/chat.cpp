@@ -663,37 +663,37 @@ void CChat::InitFexCommands() {
 	// more commands here
 
 	// Auto join team command
-    Console()->Register("fexautojointeam", "i[team]i[delay]?i[lock]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
-        CChat* pChat = (CChat*)pUserData;
+    // Console()->Register("fexautojointeam", "i[team]i[delay]?i[lock]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
+    //     CChat* pChat = (CChat*)pUserData;
         
-        int Team = pResult->GetInteger(0);
-        if(Team < 0 || Team > 63) {
-            pChat->Echo("Invalid team number (0-63)");
-            return;
-        }
+    //     int Team = pResult->GetInteger(0);
+    //     if(Team < 0 || Team > 63) {
+    //         pChat->Echo("Invalid team number (0-63)");
+    //         return;
+    //     }
 
-		if(pResult->NumArguments() == 1) {
-			g_Config.m_ClAutoJoinTeam = Team;
-		}
+	// 	if(pResult->NumArguments() == 1) {
+	// 		g_Config.m_ClAutoJoinTeam = Team;
+	// 	}
 
         
-        if(pResult->NumArguments() >= 2) {
-            int Delay = pResult->GetInteger(1);
-            if(Delay >= 0 && Delay <= 20)
-                g_Config.m_ClAutoJoinTeamDelay = Delay;
-        }
+    //     if(pResult->NumArguments() >= 2) {
+    //         int Delay = pResult->GetInteger(1);
+    //         if(Delay >= 0 && Delay <= 20)
+    //             g_Config.m_ClAutoJoinTeamDelay = Delay;
+    //     }
         
-        if(pResult->NumArguments() >= 3) {
-            g_Config.m_ClAutoJoinTeamLock = pResult->GetInteger(2) ? 1 : 0;
-        }
+    //     if(pResult->NumArguments() >= 3) {
+    //         g_Config.m_ClAutoJoinTeamLock = pResult->GetInteger(2) ? 1 : 0;
+    //     }
 
-        char aBuf[128];
-        str_format(aBuf, sizeof(aBuf), "Auto join team %d with %d second delay (Lock: %s)", 
-            g_Config.m_ClAutoJoinTeam,
-            g_Config.m_ClAutoJoinTeamDelay,
-            g_Config.m_ClAutoJoinTeamLock ? "on" : "off");
-        pChat->Echo(aBuf);
-    }, this, "Auto join specified team");
+    //     char aBuf[128];
+    //     str_format(aBuf, sizeof(aBuf), "Auto join team %d with %d second delay (Lock: %s)", 
+    //         g_Config.m_ClAutoJoinTeam,
+    //         g_Config.m_ClAutoJoinTeamDelay,
+    //         g_Config.m_ClAutoJoinTeamLock ? "on" : "off");
+    //     pChat->Echo(aBuf);
+    // }, this, "Auto join specified team");
 
     // Auto join dummy command
     Console()->Register("fexautojoindummy", "?i[delay]i[switch]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
@@ -725,38 +725,45 @@ void CChat::InitFexCommands() {
 	// FeX easy chat to functions command
 	//
 	// clone
-	Console()->Register("fexclone", "s[playername]", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
+	Console()->Register("fexclone", "s?i?i?i?", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
 		CChat* pChat = (CChat*)pUserData;
-		const char* pPlayerName = pResult->GetString(0);
-		
-		// Find the target player
+
+		const char* pPlayerName = pResult->NumArguments() > 0 ? pResult->GetString(0) : "";
+		if(pPlayerName[0] == '\0'){
+			pChat->m_pClient->aMessage("Usage: !clone {playername} [cloneName] [cloneClan] [cloneSkin]");
+			return;
+		}
+
+		int flagName = 1, flagClan = 1, flagSkin = 1;
+		if(pResult->NumArguments() >= 2)
+			flagName = pResult->GetInteger(1);
+		if(pResult->NumArguments() >= 3)
+			flagClan = pResult->GetInteger(2);
+		if(pResult->NumArguments() >= 4)
+			flagSkin = pResult->GetInteger(3);
+
 		int TargetID = -1;
 		for(int i = 0; i < MAX_CLIENTS; i++)
 		{
-			if(pChat->m_pClient->m_aClients[i].m_Active && 
-			   str_comp_nocase(pChat->m_pClient->m_aClients[i].m_aName, pPlayerName) == 0)
+			if(pChat->m_pClient->m_aClients[i].m_Active &&
+			str_comp_nocase(pChat->m_pClient->m_aClients[i].m_aName, pPlayerName) == 0)
 			{
 				TargetID = i;
 				break;
 			}
 		}
-		
 		if(TargetID == -1)
 		{
 			pChat->Echo("Player not found!");
 			return;
 		}
-		
-		// Get target player's info
+
 		const CGameClient::CClientData& TargetData = pChat->m_pClient->m_aClients[TargetID];
-	
-		// Store original data before cloning
+
 		if (!pChat->m_OriginalData.m_HasClone)
 		{
 			if(g_Config.m_ClAlreadyCloned)
-			{
 				return;
-			}
 			else
 			{
 				if(g_Config.m_ClDummy)
@@ -783,101 +790,149 @@ void CChat::InitFexCommands() {
 				}
 			}
 		}
-	
-		// Copy name (add dot at the end)
-		char aNewName[MAX_NAME_LENGTH];
-		str_format(aNewName, sizeof(aNewName), "%s..", TargetData.m_aName);
 
-		
-		// Apply the clone settings
+		char aNewName[MAX_NAME_LENGTH] = {0};
+		int targetNameLen = str_length(TargetData.m_aName);
+		if (flagName && targetNameLen < MAX_NAME_LENGTH - 1)
+		{
+			char aCandidate[MAX_NAME_LENGTH] = {0};
+			str_copy(aCandidate, TargetData.m_aName, sizeof(aCandidate));
+			
+			if (str_length(aCandidate) < MAX_NAME_LENGTH - 1)
+				str_append(aCandidate, ".", sizeof(aCandidate));
+			else
+				aCandidate[0] = '\0';
+
+			bool nameExists = true;
+			while (nameExists && aCandidate[0] != '\0')
+			{
+				nameExists = false;
+				for (int i = 0; i < MAX_CLIENTS; i++)
+				{
+					if (pChat->m_pClient->m_aClients[i].m_Active &&
+						str_comp_nocase(aCandidate, pChat->m_pClient->m_aClients[i].m_aName) == 0)
+					{
+						nameExists = true;
+						break;
+					}
+				}
+				if (nameExists)
+				{
+					int currentLength = str_length(aCandidate);
+					if (currentLength < MAX_NAME_LENGTH - 1)
+						str_append(aCandidate, ".", sizeof(aCandidate));
+					else
+					{
+						aCandidate[0] = '\0';
+						break;
+					}
+				}
+			}
+			if (aCandidate[0] != '\0')
+				str_copy(aNewName, aCandidate, sizeof(aNewName));
+		}
+		else
+		{
+			aNewName[0] = '\0';
+		}
+
+
+		char aBuf[256];
+
 		if(g_Config.m_ClDummy)
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "dummy_name %s", aNewName);
-			pChat->Console()->ExecuteLine(aBuf);
-		
-			str_format(aBuf, sizeof(aBuf), "dummy_clan %s", TargetData.m_aClan);
-			pChat->Console()->ExecuteLine(aBuf);
-		
-			str_format(aBuf, sizeof(aBuf), "dummy_skin %s", TargetData.m_aSkinName);
-			pChat->Console()->ExecuteLine(aBuf);
-		
-			if (TargetData.m_UseCustomColor)
+			if(flagName && aNewName[0] != '\0')
 			{
-				pChat->Console()->ExecuteLine("dummy_use_custom_color 1");
-				str_format(aBuf, sizeof(aBuf), "dummy_color_body %d", TargetData.m_ColorBody);
-				pChat->Console()->ExecuteLine(aBuf);
-		
-				str_format(aBuf, sizeof(aBuf), "dummy_color_feet %d", TargetData.m_ColorFeet);
+				str_format(aBuf, sizeof(aBuf), "dummy_name %s", aNewName);
 				pChat->Console()->ExecuteLine(aBuf);
 			}
-			else
+			if(flagClan)
 			{
-				pChat->Console()->ExecuteLine("dummy_use_custom_color 0");
+				str_format(aBuf, sizeof(aBuf), "dummy_clan %s", TargetData.m_aClan);
+				pChat->Console()->ExecuteLine(aBuf);
+			}
+			if(flagSkin)
+			{
+				str_format(aBuf, sizeof(aBuf), "dummy_skin %s", TargetData.m_aSkinName);
+				pChat->Console()->ExecuteLine(aBuf);
+				if (TargetData.m_UseCustomColor)
+				{
+					pChat->Console()->ExecuteLine("dummy_use_custom_color 1");
+					str_format(aBuf, sizeof(aBuf), "dummy_color_body %d", TargetData.m_ColorBody);
+					pChat->Console()->ExecuteLine(aBuf);
+					str_format(aBuf, sizeof(aBuf), "dummy_color_feet %d", TargetData.m_ColorFeet);
+					pChat->Console()->ExecuteLine(aBuf);
+				}
+				else
+				{
+					pChat->Console()->ExecuteLine("dummy_use_custom_color 0");
+				}
 			}
 		}
 		else
 		{
-			char aBuf[256];
-			str_format(aBuf, sizeof(aBuf), "player_name %s", aNewName);
-			pChat->Console()->ExecuteLine(aBuf);
-		
-			str_format(aBuf, sizeof(aBuf), "player_clan %s", TargetData.m_aClan);
-			pChat->Console()->ExecuteLine(aBuf);
-		
-			str_format(aBuf, sizeof(aBuf), "player_skin %s", TargetData.m_aSkinName);
-			pChat->Console()->ExecuteLine(aBuf);
-		
-			if (TargetData.m_UseCustomColor)
+			if(flagName && aNewName[0] != '\0')
 			{
-				pChat->Console()->ExecuteLine("player_use_custom_color 1");
-				str_format(aBuf, sizeof(aBuf), "player_color_body %d", TargetData.m_ColorBody);
-				pChat->Console()->ExecuteLine(aBuf);
-		
-				str_format(aBuf, sizeof(aBuf), "player_color_feet %d", TargetData.m_ColorFeet);
+				str_format(aBuf, sizeof(aBuf), "player_name %s", aNewName);
 				pChat->Console()->ExecuteLine(aBuf);
 			}
-			else
+			if(flagClan)
 			{
-				pChat->Console()->ExecuteLine("player_use_custom_color 0");
+				str_format(aBuf, sizeof(aBuf), "player_clan %s", TargetData.m_aClan);
+				pChat->Console()->ExecuteLine(aBuf);
+			}
+			if(flagSkin)
+			{
+				str_format(aBuf, sizeof(aBuf), "player_skin %s", TargetData.m_aSkinName);
+				pChat->Console()->ExecuteLine(aBuf);
+				if (TargetData.m_UseCustomColor)
+				{
+					pChat->Console()->ExecuteLine("player_use_custom_color 1");
+					str_format(aBuf, sizeof(aBuf), "player_color_body %d", TargetData.m_ColorBody);
+					pChat->Console()->ExecuteLine(aBuf);
+					str_format(aBuf, sizeof(aBuf), "player_color_feet %d", TargetData.m_ColorFeet);
+					pChat->Console()->ExecuteLine(aBuf);
+				}
+				else
+				{
+					pChat->Console()->ExecuteLine("player_use_custom_color 0");
+				}
 			}
 		}
-	
+
 		char aMsg[128];
-		str_format(aMsg, sizeof(aMsg), "Cloned appearance of player '%s'", pPlayerName);
-		pChat->Echo(aMsg);
-	}, this, "Clone a player's appearance");
+		str_format(aMsg, sizeof(aMsg), "Cloned appearance of player '%s' with flags: Name[%d] Clan[%d] Skin[%d]", pPlayerName, flagName, flagClan, flagSkin);
+		pChat->m_pClient->aMessage(aMsg);
+	}, this, "Clone a player's appearance with optional parameters: name, clan, and skin");
+
 
 	Console()->Register("fexdelclone", "", CFGFLAG_CLIENT, [](IConsole::IResult *pResult, void *pUserData) {
 		CChat* pChat = (CChat*)pUserData;
-	
+
 		if (!pChat->m_OriginalData.m_HasClone)
 		{
 			pChat->Echo("You have no clone to delete.");
 			return;
 		}
-	
+
 		char aBuf[256];
-	
-		// Restore original settings
 
 		if(g_Config.m_ClDummy)
 		{
 			str_format(aBuf, sizeof(aBuf), "dummy_name %s", pChat->m_OriginalData.m_aOriginalName);
 			pChat->Console()->ExecuteLine(aBuf);
-		
+			
 			str_format(aBuf, sizeof(aBuf), "dummy_clan %s", pChat->m_OriginalData.m_aOriginalClan);
 			pChat->Console()->ExecuteLine(aBuf);
-		
+			
 			str_format(aBuf, sizeof(aBuf), "dummy_skin %s", pChat->m_OriginalData.m_aOriginalSkin);
 			pChat->Console()->ExecuteLine(aBuf);
-		
+			
 			if (pChat->m_OriginalData.m_OriginalUseCustomColor)
 			{
 				pChat->Console()->ExecuteLine("dummy_use_custom_color 1");
 				str_format(aBuf, sizeof(aBuf), "dummy_color_body %d", pChat->m_OriginalData.m_OriginalColorBody);
 				pChat->Console()->ExecuteLine(aBuf);
-		
 				str_format(aBuf, sizeof(aBuf), "dummy_color_feet %d", pChat->m_OriginalData.m_OriginalColorFeet);
 				pChat->Console()->ExecuteLine(aBuf);
 			}
@@ -890,19 +945,18 @@ void CChat::InitFexCommands() {
 		{
 			str_format(aBuf, sizeof(aBuf), "player_name %s", pChat->m_OriginalData.m_aOriginalName);
 			pChat->Console()->ExecuteLine(aBuf);
-		
+			
 			str_format(aBuf, sizeof(aBuf), "player_clan %s", pChat->m_OriginalData.m_aOriginalClan);
 			pChat->Console()->ExecuteLine(aBuf);
-		
+			
 			str_format(aBuf, sizeof(aBuf), "player_skin %s", pChat->m_OriginalData.m_aOriginalSkin);
 			pChat->Console()->ExecuteLine(aBuf);
-		
+			
 			if (pChat->m_OriginalData.m_OriginalUseCustomColor)
 			{
 				pChat->Console()->ExecuteLine("player_use_custom_color 1");
 				str_format(aBuf, sizeof(aBuf), "player_color_body %d", pChat->m_OriginalData.m_OriginalColorBody);
 				pChat->Console()->ExecuteLine(aBuf);
-		
 				str_format(aBuf, sizeof(aBuf), "player_color_feet %d", pChat->m_OriginalData.m_OriginalColorFeet);
 				pChat->Console()->ExecuteLine(aBuf);
 			}
@@ -912,13 +966,12 @@ void CChat::InitFexCommands() {
 			}
 		}
 
-	
-		// Clear the clone data
 		pChat->m_OriginalData.m_HasClone = false;
 		g_Config.m_ClAlreadyCloned = 0;
-	
-		pChat->Echo("Your clone has been deleted. Original appearance restored.");
+
+		pChat->m_pClient->aMessage("Your clone has been deleted. Original appearance restored.");
 	}, this, "Delete your cloned appearance and restore your original one.");
+
 	
 
 	// Votekick
@@ -2186,6 +2239,7 @@ void CChat::ChatDetection(int ClientId, int Team, const char *pLine)
 
 				str_format(Text, sizeof(Text), "%s%s%s", GameClient()->m_aClients[ClientId].m_aName, ClientId >= 0 ? ": " : "", pLine);
 				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX->", Text, color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMessageColor)));
+				SendChat(0, Text);
 
 				// Chat Response
 				if(g_Config.m_ClDismissAdBots == 1)

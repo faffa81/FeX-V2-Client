@@ -67,7 +67,6 @@ enum
 	NETMSG_PING_REPLY,
 	NETMSG_UNUSED5,
 
-	// sent by server (todo: move it up)
 	NETMSG_RCON_CMD_ADD,
 	NETMSG_RCON_CMD_REM,
 

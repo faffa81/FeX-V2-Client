@@ -82,6 +82,8 @@
 #include "components/fex/fx_enums.h"
 #include "components/fex/fexversion.h"
 
+#include <thread>
+
 using namespace std::chrono_literals;
 
 const char *CGameClient::Version() const { return GAME_VERSION; }
@@ -111,10 +113,18 @@ void CGameClient::OnConsoleInit()
 	m_pFriends = Kernel()->RequestInterface<IFriends>();
 	m_pFoes = Client()->Foes();
 	m_pDiscord = Kernel()->RequestInterface<IDiscord>();
+
 #if defined(CONF_AUTOUPDATE)
 	m_pUpdater = Kernel()->RequestInterface<IUpdater>();
 #endif
+
 	m_pHttp = Kernel()->RequestInterface<IHttp>();
+	if(!m_pHttp)
+	{
+		dbg_msg("updater", "Error: failed to obtain IHttp interface");
+		// Handle error appropriately
+	}
+
 
 	// make a list of all the systems, make sure to add them in the correct render order
 	m_vpAll.insert(m_vpAll.end(), {&m_Skins,
@@ -173,6 +183,7 @@ void CGameClient::OnConsoleInit()
 
 						  &m_FreezeKill,
 						  &m_Update,
+						  &m_FexUpdater,
 
 					      &CMenus::m_Binder,
 					      &m_GameConsole,
@@ -317,7 +328,7 @@ void CGameClient::InitializeLanguage()
 
 void CGameClient::OnInit()
 {
-
+	m_LifetimeKills = g_Config.m_LifetimeKills;
 	const int64_t OnInitStart = time_get();
 
 	Client()->SetLoadingCallback([this](IClient::ELoadingCallbackDetail Detail) {
@@ -386,8 +397,8 @@ void CGameClient::OnInit()
 
 
 	const char *pLoadingDDNetCaption = Localize(aFexVs);
-	const char *pLoadingMessageComponents = Localize("Removing System 32(joke)");
-	const char *pLoadingMessageComponentsSpecial = Localize("Damn you found this message, I'm impressed. Hello fellow gangstas");
+	const char *pLoadingMessageComponents = Localize("Loading Components");
+	const char *pLoadingMessageComponentsSpecial = Localize("Damn you found this message, I'm impressed. Hello fellow guests!");
 	char aLoadingMessage[256];
 
 	// init all components
@@ -411,7 +422,6 @@ void CGameClient::OnInit()
 		++CompCounter;
 	}
 
-
 	// random ddnet shit
 	m_GameSkinLoaded = false;
 	m_ParticlesSkinLoaded = false;
@@ -419,7 +429,7 @@ void CGameClient::OnInit()
 	m_HudSkinLoaded = false;
 
 	// setup load amount, load textures
-	const char *pLoadingMessageAssets = Localize("rendering MC(gangsta)");
+	const char *pLoadingMessageAssets = Localize("Loading Assets");
 	for(int i = 0; i < g_pData->m_NumImages; i++)
 	{
 		if(i == IMAGE_GAME)
@@ -467,8 +477,60 @@ void CGameClient::OnInit()
 		pChecksum->m_aComponentsChecksum[i] = Size;
 	}
 
-	m_Menus.FinishLoading();
+	m_Menus.RenderFadeLoadingScreen();
+	if(g_Config.m_ClCustomLoadingScreen)
+	{
+		m_Menus.ResetFadeLoading(); 
+		while(!m_Menus.FadeLoadingDone())
+		{
+			m_Menus.RenderFadeLoadingScreen();
+		}
+		m_Menus.FinishLoading();
+	}
+	else
+	{
+		m_Menus.FinishLoading();
+	}	
 	log_trace("gameclient", "initialization finished after %.2fms", (time_get() - OnInitStart) * 1000.0f / (float)time_freq());
+}
+
+void CGameClient::ParseTeamModeSplits()
+{
+    char aSplits[64];
+    str_copy(aSplits, g_Config.m_Cl1v1TeamModeSplits, sizeof(aSplits));
+
+    char *pSavePtr = nullptr;
+    char *pToken = strtok_r(aSplits, "v", &pSavePtr);
+
+    std::vector<int> vTeamSizes;
+    int nTotalPlayers = 0;
+
+    const int MaxClients = MAX_CLIENTS;
+    const int MaxPerTeam = (MaxClients <= 64 ? MaxClients - 1 : MaxClients - 2);
+
+    while (pToken)
+    {
+        int teamSize = atoi(pToken);
+        if (teamSize < 1)
+            teamSize = 1;
+        if (teamSize > MaxPerTeam)
+            teamSize = MaxPerTeam;
+
+        vTeamSizes.push_back(teamSize);
+        nTotalPlayers += teamSize;
+        pToken = strtok_r(nullptr, "v", &pSavePtr);
+    }
+
+    if(nTotalPlayers > MaxClients)
+    {
+        dbg_msg("TeamMode", "Total players specified (%d) exceed the server limit (%d). Please adjust the team splits.", nTotalPlayers, MaxClients);
+        return;
+    }
+
+    for (unsigned i = 0; i < vTeamSizes.size(); i++)
+    {
+        dbg_msg("TeamMode", "Team %d: %d player(s)", i + 1, vTeamSizes[i]);
+    }
 }
 
 void CGameClient::ConAddPlayerScore(IConsole::IResult *pResult, void *pUserData)
@@ -1044,6 +1106,17 @@ void CGameClient::UpdatePositions()
 
 void CGameClient::OnRender()
 {
+    static int s_InternalLifetimeTime = g_Config.m_LifetimeTime;
+    static int64_t s_LastLifetimeUpdate = time_get();
+
+    int64_t CurrentTime = time_get();
+    if(CurrentTime - s_LastLifetimeUpdate >= time_freq())
+    {
+        s_InternalLifetimeTime++;
+        s_LastLifetimeUpdate = CurrentTime;
+        g_Config.m_LifetimeTime = s_InternalLifetimeTime;
+    }
+
 	// DDNETTTTT
 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
 	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
@@ -1552,10 +1625,12 @@ void CGameClient::RenderShutdownMessage()
 		pMessage = Localize("Quitting FeX. Please wait…");
 	else if(Client()->State() == IClient::STATE_RESTARTING)
 		pMessage = Localize("Restarting FeX. Please wait…");
+	// *** ADDED: Handle the no-save restart state ***
+	else if(Client()->State() == IClient::STATE_RESTARTING_NOSAVE)
+		pMessage = Localize("Restarting FeX without saving. Please wait…");
 	else
 		dbg_assert(false, "Invalid client state for quitting message");
 
-	// This function only gets called after the render loop has already terminated, so we have to call Swap manually.
 	Graphics()->Clear(0.0f, 0.0f, 0.0f);
 	Ui()->MapScreen();
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
@@ -1563,6 +1638,7 @@ void CGameClient::RenderShutdownMessage()
 	Graphics()->Swap();
 	Graphics()->Clear(0.0f, 0.0f, 0.0f);
 }
+
 
 void CGameClient::OnRconType(bool UsernameReq)
 {
@@ -3515,17 +3591,29 @@ void CGameClient::SendDummyInfo(bool Start)
 
 void CGameClient::SendKill() const
 {
-	if(g_Config.m_Cl1v1ModeKillLock)
-		return;
-	
-	CNetMsg_Cl_Kill Msg;
-	Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
+    if(g_Config.m_Cl1v1ModeKillLock)
+        return;
 
-	if(g_Config.m_ClDummyCopyMoves)
-	{
-		CMsgPacker MsgP(NETMSGTYPE_CL_KILL, false);
-		Client()->SendMsg(!g_Config.m_ClDummy, &MsgP, MSGFLAG_VITAL);
-	}
+    int64_t Now = time_get();
+    if(Now < m_LastKillTime + time_freq() * 2.7)
+        return;
+    m_LastKillTime = Now;
+
+    if(g_Config.m_LifetimeKills != m_LifetimeKills)
+        g_Config.m_LifetimeKills = m_LifetimeKills;
+
+    // Send the kill message
+    CNetMsg_Cl_Kill Msg;
+    Client()->SendPackMsgActive(&Msg, MSGFLAG_VITAL);
+
+    if(g_Config.m_ClDummyCopyMoves)
+    {
+        CMsgPacker MsgP(NETMSGTYPE_CL_KILL, false);
+        Client()->SendMsg(!g_Config.m_ClDummy, &MsgP, MSGFLAG_VITAL);
+    }
+
+    ++const_cast<CGameClient*>(this)->m_LifetimeKills;
+    g_Config.m_LifetimeKills = m_LifetimeKills;
 }
 
 void CGameClient::SendReadyChange7()

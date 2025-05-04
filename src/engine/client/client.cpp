@@ -395,10 +395,15 @@ int *CClient::GetInput(int Tick, int IsDummy) const
 	return nullptr;
 }
 
+void CClient::RestartWithoutSave()
+{
+	SetState(IClient::STATE_RESTARTING_NOSAVE);
+}
+
 // ------ state handling -----
 void CClient::SetState(EClientState State)
 {
-	if(m_State == IClient::STATE_QUITTING || m_State == IClient::STATE_RESTARTING)
+	if(m_State == IClient::STATE_QUITTING || m_State == IClient::STATE_RESTARTING || m_State == IClient::STATE_RESTARTING_NOSAVE)
 		return;
 	if(m_State == State)
 		return;
@@ -543,110 +548,183 @@ void CClient::GenerateTimeoutCodes(const NETADDR *pAddrs, int NumAddrs)
 
 void CClient::Connect(const char *pAddress, const char *pPassword)
 {
-	// Disconnect will not change the state if we are already quitting/restarting
+	if(g_Config.m_UiLastJoinedServer[0] == '\0')
+	{
+		str_copy(g_Config.m_UiLastJoinedServer, pAddress, sizeof(g_Config.m_UiLastJoinedServer));
+	}
+	else if(str_comp(pAddress, g_Config.m_UiLastJoinedServer) != 0)
+	{
+		int duplicateIndex = 0;
+		if(str_comp(pAddress, g_Config.m_UiStoredServer1) == 0)
+			duplicateIndex = 1;
+		else if(str_comp(pAddress, g_Config.m_UiStoredServer2) == 0)
+			duplicateIndex = 2;
+		else if(str_comp(pAddress, g_Config.m_UiStoredServer3) == 0)
+			duplicateIndex = 3;
+		else if(str_comp(pAddress, g_Config.m_UiStoredServer4) == 0)
+			duplicateIndex = 4;
+	
+		if(duplicateIndex != 0)
+		{
+			char aTemp[sizeof(g_Config.m_UiLastJoinedServer)];
+			str_copy(aTemp, g_Config.m_UiLastJoinedServer, sizeof(aTemp));
+	
+			str_copy(g_Config.m_UiLastJoinedServer, pAddress, sizeof(g_Config.m_UiLastJoinedServer));
+	
+			if(duplicateIndex == 1)
+			{
+				str_copy(g_Config.m_UiStoredServer1, g_Config.m_UiStoredServer2, sizeof(g_Config.m_UiStoredServer1));
+				str_copy(g_Config.m_UiStoredServer2, g_Config.m_UiStoredServer3, sizeof(g_Config.m_UiStoredServer2));
+				str_copy(g_Config.m_UiStoredServer3, g_Config.m_UiStoredServer4, sizeof(g_Config.m_UiStoredServer3));
+				g_Config.m_UiStoredServer4[0] = '\0';
+			}
+			else if(duplicateIndex == 2)
+			{
+				str_copy(g_Config.m_UiStoredServer2, g_Config.m_UiStoredServer3, sizeof(g_Config.m_UiStoredServer2));
+				str_copy(g_Config.m_UiStoredServer3, g_Config.m_UiStoredServer4, sizeof(g_Config.m_UiStoredServer3));
+				g_Config.m_UiStoredServer4[0] = '\0';
+			}
+			else if(duplicateIndex == 3)
+			{
+				str_copy(g_Config.m_UiStoredServer3, g_Config.m_UiStoredServer4, sizeof(g_Config.m_UiStoredServer3));
+				g_Config.m_UiStoredServer4[0] = '\0';
+			}
+			else if(duplicateIndex == 4)
+			{
+				g_Config.m_UiStoredServer4[0] = '\0';
+			}
+	
+			if(g_Config.m_UiStoredServer1[0] == '\0')
+			{
+				str_copy(g_Config.m_UiStoredServer1, aTemp, sizeof(g_Config.m_UiStoredServer1));
+			}
+			else
+			{
+				str_copy(g_Config.m_UiStoredServer4, g_Config.m_UiStoredServer3, sizeof(g_Config.m_UiStoredServer4));
+				str_copy(g_Config.m_UiStoredServer3, g_Config.m_UiStoredServer2, sizeof(g_Config.m_UiStoredServer3));
+				str_copy(g_Config.m_UiStoredServer2, g_Config.m_UiStoredServer1, sizeof(g_Config.m_UiStoredServer2));
+				str_copy(g_Config.m_UiStoredServer1, aTemp, sizeof(g_Config.m_UiStoredServer1));
+			}
+		}
+		else
+		{
+			char aTemp[sizeof(g_Config.m_UiLastJoinedServer)];
+			str_copy(aTemp, g_Config.m_UiLastJoinedServer, sizeof(aTemp));
+	
+			if(g_Config.m_UiStoredServer3[0] != '\0')
+				str_copy(g_Config.m_UiStoredServer4, g_Config.m_UiStoredServer3, sizeof(g_Config.m_UiStoredServer4));
+			if(g_Config.m_UiStoredServer2[0] != '\0')
+				str_copy(g_Config.m_UiStoredServer3, g_Config.m_UiStoredServer2, sizeof(g_Config.m_UiStoredServer3));
+			if(g_Config.m_UiStoredServer1[0] != '\0')
+				str_copy(g_Config.m_UiStoredServer2, g_Config.m_UiStoredServer1, sizeof(g_Config.m_UiStoredServer2));
+	
+			str_copy(g_Config.m_UiStoredServer1, aTemp, sizeof(g_Config.m_UiStoredServer1));
+			str_copy(g_Config.m_UiLastJoinedServer, pAddress, sizeof(g_Config.m_UiLastJoinedServer));
+		}
+	}
+	
 	if(m_State == IClient::STATE_QUITTING || m_State == IClient::STATE_RESTARTING)
 		return;
 	Disconnect();
 	dbg_assert(m_State == IClient::STATE_OFFLINE, "Disconnect must ensure that client is offline");
-
+	
 	const NETADDR LastAddr = ServerAddress();
-
+	
 	if(pAddress != m_aConnectAddressStr)
-		str_copy(m_aConnectAddressStr, pAddress);
-
+		str_copy(m_aConnectAddressStr, pAddress, sizeof(m_aConnectAddressStr));
+	
 	char aMsg[512];
 	str_format(aMsg, sizeof(aMsg), "connecting to '%s'", m_aConnectAddressStr);
 	m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", aMsg, gs_ClientNetworkPrintColor);
 
-	int NumConnectAddrs = 0;
-	NETADDR aConnectAddrs[MAX_SERVER_ADDRESSES];
-	mem_zero(aConnectAddrs, sizeof(aConnectAddrs));
-	const char *pNextAddr = pAddress;
-	char aBuffer[128];
-	bool OnlySixup = true;
-	while((pNextAddr = str_next_token(pNextAddr, ",", aBuffer, sizeof(aBuffer))))
-	{
-		NETADDR NextAddr;
-		char aHost[128];
-		int url = net_addr_from_url(&NextAddr, aBuffer, aHost, sizeof(aHost));
-		bool Sixup = NextAddr.type & NETTYPE_TW7;
-		if(url > 0)
-			str_copy(aHost, aBuffer);
+    int NumConnectAddrs = 0;
+    NETADDR aConnectAddrs[MAX_SERVER_ADDRESSES];
+    mem_zero(aConnectAddrs, sizeof(aConnectAddrs));
+    const char *pNextAddr = pAddress;
+    char aBuffer[128];
+    bool OnlySixup = true;
+    while((pNextAddr = str_next_token(pNextAddr, ",", aBuffer, sizeof(aBuffer))))
+    {
+        NETADDR NextAddr;
+        char aHost[128];
+        int url = net_addr_from_url(&NextAddr, aBuffer, aHost, sizeof(aHost));
+        bool Sixup = NextAddr.type & NETTYPE_TW7;
+        if(url > 0)
+            str_copy(aHost, aBuffer, sizeof(aHost));
 
-		if(net_host_lookup(aHost, &NextAddr, m_aNetClient[CONN_MAIN].NetType()) != 0)
-		{
-			log_error("client", "could not find address of %s", aHost);
-			continue;
-		}
-		if(NumConnectAddrs == (int)std::size(aConnectAddrs))
-		{
-			log_warn("client", "too many connect addresses, ignoring %s", aHost);
-			continue;
-		}
-		if(NextAddr.port == 0)
-		{
-			NextAddr.port = 8303;
-		}
-		if(Sixup)
-			NextAddr.type |= NETTYPE_TW7;
-		else
-			OnlySixup = false;
+        if(net_host_lookup(aHost, &NextAddr, m_aNetClient[CONN_MAIN].NetType()) != 0)
+        {
+            log_error("client", "could not find address of %s", aHost);
+            continue;
+        }
+        if(NumConnectAddrs == (int)std::size(aConnectAddrs))
+        {
+            log_warn("client", "too many connect addresses, ignoring %s", aHost);
+            continue;
+        }
+        if(NextAddr.port == 0)
+        {
+            NextAddr.port = 8303;
+        }
+        if(Sixup)
+            NextAddr.type |= NETTYPE_TW7;
+        else
+            OnlySixup = false;
 
-		char aNextAddr[NETADDR_MAXSTRSIZE];
-		net_addr_str(&NextAddr, aNextAddr, sizeof(aNextAddr), true);
-		log_debug("client", "resolved connect address '%s' to %s", aBuffer, aNextAddr);
+        char aNextAddr[NETADDR_MAXSTRSIZE];
+        net_addr_str(&NextAddr, aNextAddr, sizeof(aNextAddr), true);
+        log_debug("client", "resolved connect address '%s' to %s", aBuffer, aNextAddr);
 
-		if(NextAddr == LastAddr)
-		{
-			m_SendPassword = true;
-		}
+        if(NextAddr == LastAddr)
+        {
+            m_SendPassword = true;
+        }
 
-		aConnectAddrs[NumConnectAddrs] = NextAddr;
-		NumConnectAddrs += 1;
-	}
+        aConnectAddrs[NumConnectAddrs] = NextAddr;
+        NumConnectAddrs += 1;
+    }
 
-	if(NumConnectAddrs == 0)
-	{
-		log_error("client", "could not find any connect address");
-		char aWarning[256];
-		str_format(aWarning, sizeof(aWarning), Localize("Could not resolve connect address '%s'. See local console for details."), m_aConnectAddressStr);
-		SWarning Warning(Localize("Connect address error"), aWarning);
-		Warning.m_AutoHide = false;
-		AddWarning(Warning);
-		return;
-	}
+    if(NumConnectAddrs == 0)
+    {
+        log_error("client", "could not find any connect address");
+        char aWarning[256];
+        str_format(aWarning, sizeof(aWarning), Localize("Could not resolve connect address '%s'. See local console for details."), m_aConnectAddressStr);
+        SWarning Warning(Localize("Connect address error"), aWarning);
+        Warning.m_AutoHide = false;
+        AddWarning(Warning);
+        return;
+    }
 
-	m_ConnectionId = RandomUuid();
-	ServerInfoRequest();
+    m_ConnectionId = RandomUuid();
+    ServerInfoRequest();
 
-	if(m_SendPassword)
-	{
-		str_copy(m_aPassword, g_Config.m_Password);
-		m_SendPassword = false;
-	}
-	else if(!pPassword)
-		m_aPassword[0] = 0;
-	else
-		str_copy(m_aPassword, pPassword);
+    if(m_SendPassword)
+    {
+        str_copy(m_aPassword, g_Config.m_Password);
+        m_SendPassword = false;
+    }
+    else if(!pPassword)
+        m_aPassword[0] = 0;
+    else
+        str_copy(m_aPassword, pPassword, sizeof(m_aPassword));
 
-	m_CanReceiveServerCapabilities = true;
+    m_CanReceiveServerCapabilities = true;
 
-	m_Sixup = OnlySixup;
-	if(m_Sixup)
-	{
-		m_aNetClient[CONN_MAIN].Connect7(aConnectAddrs, NumConnectAddrs);
-	}
-	else
-		m_aNetClient[CONN_MAIN].Connect(aConnectAddrs, NumConnectAddrs);
+    m_Sixup = OnlySixup;
+    if(m_Sixup)
+        m_aNetClient[CONN_MAIN].Connect7(aConnectAddrs, NumConnectAddrs);
+    else
+        m_aNetClient[CONN_MAIN].Connect(aConnectAddrs, NumConnectAddrs);
 
-	m_aNetClient[CONN_MAIN].RefreshStun();
-	SetState(IClient::STATE_CONNECTING);
+    m_aNetClient[CONN_MAIN].RefreshStun();
+    SetState(IClient::STATE_CONNECTING);
 
-	m_InputtimeMarginGraph.Init(-150.0f, 150.0f);
-	m_aGametimeMarginGraphs[CONN_MAIN].Init(-150.0f, 150.0f);
+    m_InputtimeMarginGraph.Init(-150.0f, 150.0f);
+    m_aGametimeMarginGraphs[CONN_MAIN].Init(-150.0f, 150.0f);
 
-	GenerateTimeoutCodes(aConnectAddrs, NumConnectAddrs);
+    GenerateTimeoutCodes(aConnectAddrs, NumConnectAddrs);
 }
+
 
 void CClient::DisconnectWithReason(const char *pReason)
 {
@@ -3315,7 +3393,7 @@ void CClient::Run()
 
 		m_Fifo.Update();
 
-		if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING)
+		if(State() == IClient::STATE_QUITTING || State() == IClient::STATE_RESTARTING || State() == IClient::STATE_RESTARTING_NOSAVE)
 			break;
 
 		// beNice
@@ -3368,11 +3446,18 @@ void CClient::Run()
 	GameClient()->RenderShutdownMessage();
 	Disconnect();
 
-	if(!m_pConfigManager->Save())
+	if(State() != IClient::STATE_RESTARTING_NOSAVE) // <-- Check if we should skip saving
 	{
-		char aError[128];
-		str_format(aError, sizeof(aError), Localize("Saving settings to '%s' failed"), CONFIG_FILE);
-		m_vQuittingWarnings.emplace_back(Localize("Error saving settings"), aError);
+		if(!m_pConfigManager->Save()) // Save DDNet settings
+		{
+			char aError[128];
+			str_format(aError, sizeof(aError), Localize("Saving settings to '%s' failed"), CONFIG_FILE);
+			m_vQuittingWarnings.emplace_back(Localize("Error saving settings"), aError);
+		}
+	}
+	else
+	{
+		log_info("client[FeX modified]", "Skipping configuration save due to STATE_RESTARTING_NOSAVE.");
 	}
 
 	m_Fifo.Shutdown();
@@ -4957,7 +5042,7 @@ int main(int argc, const char **argv)
 	log_trace("client", "initialization finished after %.2fms, starting...", (time_get() - MainStart) * 1000.0f / (float)time_freq());
 	pClient->Run();
 
-	const bool Restarting = pClient->State() == CClient::STATE_RESTARTING;
+	const bool Restarting = pClient->State() == CClient::STATE_RESTARTING || pClient->State() == IClient::STATE_RESTARTING_NOSAVE;
 #if !defined(CONF_PLATFORM_ANDROID)
 	char aRestartBinaryPath[IO_MAX_PATH_LENGTH];
 	if(Restarting)

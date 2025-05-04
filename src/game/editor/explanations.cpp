@@ -1,4 +1,6 @@
 #include "editor.h"
+#include <engine/config.h>
+#include <engine/shared/config.h>
 
 // DDNet entity explanations by Lady Saavik
 // TODO: Add other entities' tiles' explanations and improve new ones
@@ -108,12 +110,18 @@ const char *CEditor::ExplainDDNet(int Tile, int Layer)
 			return "HIT OTHERS: You can deactivate hitting others for single weapons, using delay number to select which.";
 		break;
 	case TILE_SOLO_ENABLE:
-		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "SOLO: You are now in a solo part.";
+		if(!g_Config.m_ClSoloHud)
+		{
+			if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
+				return "SOLO: You are now in a solo part.";
+		}
 		break;
 	case TILE_SOLO_DISABLE: // also TILE_SWITCHTIMEDOPEN
-		if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
-			return "SOLO: You are now out of the solo part.";
+		if(!g_Config.m_ClSoloHud)
+		{
+			if(Layer == LAYER_GAME || Layer == LAYER_FRONT)
+				return "SOLO: You are now in a solo part.";
+		}
 		if(Layer == LAYER_SWITCH)
 			return "TIME SWITCH: Activates switch (e.g. closes door) with the same number for a set amount of seconds.";
 		break;

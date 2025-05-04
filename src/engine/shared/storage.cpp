@@ -87,6 +87,8 @@ public:
 			Success &= CreateFolder("assets/particles", TYPE_SAVE);
 			Success &= CreateFolder("assets/hud", TYPE_SAVE);
 			Success &= CreateFolder("assets/extras", TYPE_SAVE);
+			Success &= CreateFolder("fex", TYPE_SAVE);
+			Success &= CreateFolder("fex/pets", TYPE_SAVE);
 #if defined(CONF_VIDEORECORDER)
 			Success &= CreateFolder("videos", TYPE_SAVE);
 #endif

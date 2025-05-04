@@ -78,7 +78,9 @@ class CHud : public CComponent
 	void PreparePlayerStateQuads();
 	void RenderPlayerState(int ClientId);
 
-	void RenderQuickActions(const int ClientId);
+	void RenderNotification();
+
+	void ShowSoloState(int State);
 
 	int m_LastSpectatorCountTick;
 	void RenderSpectatorCount();
@@ -109,7 +111,6 @@ public:
 	virtual void OnWindowResize() override;
 	virtual void OnReset() override;
 	virtual void OnRender() override;
-	virtual bool OnInput(const IInput::CEvent &Event) override;
 	virtual void OnInit() override;
 	void Render1v1Hud();
 	virtual void OnNewSnapshot() override;
@@ -119,6 +120,8 @@ public:
 
 	virtual void OnMessage(int MsgType, void *pRawMsg) override;
 	void RenderNinjaBarPos(float x, float y, float Width, float Height, float Progress, float Alpha = 1.0f);
+
+	void ShowNotification(const char *pText, float Duration = 2.5f, float FadeOutTime = 1.5f, ColorRGBA BgColor = ColorRGBA(0.f,0.f,0.f,0.25), ColorRGBA TextColor = ColorRGBA(1.f,1.f,1.f,1.f));
 
 private:
 	void RenderRecord();
@@ -173,12 +176,16 @@ private:
 	int m_Team0ModeOffset;
 	int m_LockModeOffset;
 
-	bool m_WKeyPressed;
-    bool m_AKeyPressed;
-    bool m_DKeyPressed;
-    bool m_SKeyPressed;
-	int m_LastPressedTick;
-    static bool s_ShowClanPage;
+    bool m_NotificationActive;
+    int64_t m_NotificationStartTime;
+    float m_NotificationDuration;
+    float m_NotificationFadeOutTime;
+    char m_NotificationText[256]; // Adjust size if needed
+    ColorRGBA m_NotificationBgColor;
+    ColorRGBA m_NotificationTextColor;
+    STextContainerIndex m_NotificationTextContainerIndex;
+
+	int m_lastSoloState;
 };
 
 #endif

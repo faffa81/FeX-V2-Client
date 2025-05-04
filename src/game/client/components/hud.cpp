@@ -24,25 +24,18 @@
 #include "hud.h"
 #include "voting.h"
 
-bool CHud::s_ShowClanPage = false;
-
 CHud::CHud()
 {
 	m_FPSTextContainerIndex.Reset();
 	m_DDRaceEffectsTextContainerIndex.Reset();
 	m_PlayerAngleTextContainerIndex.Reset();
+	m_NotificationTextContainerIndex.Reset();
 
 	for(int i = 0; i < 2; i++)
 	{
 		m_aPlayerSpeedTextContainers[i].Reset();
 		m_aPlayerPositionContainers[i].Reset();
 	}
-
-	m_WKeyPressed = false;
-    m_AKeyPressed = false;
-    m_DKeyPressed = false;
-    m_SKeyPressed = false;
-    m_LastPressedTick = 0;
 }
 
 void CHud::ResetHudContainers()
@@ -65,6 +58,7 @@ void CHud::ResetHudContainers()
 		TextRender()->DeleteTextContainer(m_aPlayerSpeedTextContainers[i]);
 		TextRender()->DeleteTextContainer(m_aPlayerPositionContainers[i]);
 	}
+	TextRender()->DeleteTextContainer(m_NotificationTextContainerIndex);
 }
 
 void CHud::OnWindowResize()
@@ -88,6 +82,7 @@ void CHud::OnReset()
 	m_aLastPlayerSpeedChange[1] = ESpeedChange::NONE;
 	m_LastSpectatorCountTick = 0;
 
+	m_NotificationActive = false;
 
 	ResetHudContainers();
 }
@@ -119,101 +114,94 @@ void CHud::OnInit()
 void CHud::Render1v1Hud()
 {
     if(!g_Config.m_Cl1v1ModeShowHud)
-        return;
-
-    // Get names and scores
-
-	char name[16];
-
-	if(g_Config.m_ClDummy)
 	{
-		str_format(name, sizeof(name), "%s", g_Config.m_ClDummyName);
+        return;
+	}
+	if(g_Config.m_Cl1v1ModeHudColor)
+	{
+		TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_Cl1v1ModeTextColor)));
 	}
 	else
 	{
-		str_format(name, sizeof(name), "%s", Client()->PlayerName());
+		TextRender()->TextColor(1.f, 1.f, 1.f, 1.f);
 	}
 
-    // Regular HUD score display (under timer)
+    {
+        char aTeamLabel[128];
+        str_format(aTeamLabel, sizeof(aTeamLabel), "%s", g_Config.m_Cl1v1TeamModeSplits);
+        float wLabel = TextRender()->TextWidth(12.0f, aTeamLabel, -1, -1.0f);
+        TextRender()->Text(m_Width/2 - wLabel/2, 13.5, 10.0f, aTeamLabel, -1.0f);
+    }
+
+    char name[16];
+    if(g_Config.m_ClDummy)
+    {
+        str_format(name, sizeof(name), "%s", Client()->DummyName());
+    }
+    else
+    {
+        str_format(name, sizeof(name), "%s", Client()->PlayerName());
+    }
+    
     {
         char aBuf[128];
         str_format(aBuf, sizeof(aBuf), "%s %d | %d %s", 
             name, 
             m_pClient->m_1v1PlayerScore,
             m_pClient->m_1v1EnemyScore,
-			g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+            g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
 
         float w = TextRender()->TextWidth(12.0f, aBuf, -1, -1.0f);
-	
-		if(g_Config.m_Cl1v1ModeHudColor)
-		{
-			TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_Cl1v1ModeTextColor)));
-		}
-		else
-		{
-			TextRender()->TextColor(1.f, 1.f, 1.f, 1.f);
-		}
-        // Position below timer (y = 20 instead of 2)
-        TextRender()->Text(m_Width/2 - w/2, 15, 12.0f, aBuf, -1.0f);
-
-
+        TextRender()->Text(m_Width/2 - w/2, 25, 12.0f, aBuf, -1.0f);
     }
 
-    // Big score notification
     static int s_LastPlayerScore = 0;
     static int s_LastEnemyScore = 0;
     static int64_t s_LastScoreTime = 0;
 
-	if(m_pClient->m_1v1PlayerScore != s_LastPlayerScore || m_pClient->m_1v1EnemyScore != s_LastEnemyScore)
-	{
-		s_LastScoreTime = time_get();
-		s_LastPlayerScore = m_pClient->m_1v1PlayerScore;
-		s_LastEnemyScore = m_pClient->m_1v1EnemyScore;
-	}
+    if(m_pClient->m_1v1PlayerScore != s_LastPlayerScore || m_pClient->m_1v1EnemyScore != s_LastEnemyScore)
+    {
+        s_LastScoreTime = time_get();
+        s_LastPlayerScore = m_pClient->m_1v1PlayerScore;
+        s_LastEnemyScore = m_pClient->m_1v1EnemyScore;
+    }
     
-    // Check for score changes
-	if(m_pClient->m_1v1PlayerScore >= g_Config.m_Cl1v1ModeScoreLimit || m_pClient->m_1v1EnemyScore >= g_Config.m_Cl1v1ModeScoreLimit)
-	{
-		// Show big notification for 3 seconds
-		if(time_get() < s_LastScoreTime + time_freq() * 1.5)
-		{
-		// Show win message if score limit reached
-		if(m_pClient->m_1v1PlayerScore >= g_Config.m_Cl1v1ModeScoreLimit || 
-			m_pClient->m_1v1EnemyScore >= g_Config.m_Cl1v1ModeScoreLimit)
-			{
-				const char* pWinnerName = (m_pClient->m_1v1PlayerScore > m_pClient->m_1v1EnemyScore) ? 
-					name : g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy";
-				char aBuf[128];
-				str_format(aBuf, sizeof(aBuf), "%s wins!", pWinnerName);
-				
-				float w = TextRender()->TextWidth(24.0f, aBuf, -1, -1.0f);
-				float Alpha = 1.0f - (float)(time_get() - s_LastScoreTime) / (time_freq() * 1.5);
-				
-				TextRender()->TextColor(1, 1, 1, Alpha);
-				TextRender()->Text(m_Width/2 - w/2, m_Height/3, 24.0f, aBuf, -1.0f);
-				TextRender()->TextColor(1, 1, 1, 1);
-			}
-		}
-	}
-	else
-	{
-		// Show big notification for 3 seconds
-		if(time_get() < s_LastScoreTime + time_freq() * 1.5)
-		{
-			char aBuf[128];
-			str_format(aBuf, sizeof(aBuf), "%s %d | %d %s", 
-				name, m_pClient->m_1v1PlayerScore, 
-				m_pClient->m_1v1EnemyScore, g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
-			
-			float w = TextRender()->TextWidth(24.0f, aBuf, -1, -1.0f);
-			float Alpha = 1.0f - (float)(time_get() - s_LastScoreTime) / (time_freq() * 1.5);
-			
-			TextRender()->TextColor(1, 1, 1, Alpha);
-			TextRender()->Text(m_Width/2 - w/2, m_Height/3, 24.0f, aBuf, -1.0f);
-			TextRender()->TextColor(1, 1, 1, 1);
-		}
-	}
+    if(m_pClient->m_1v1PlayerScore >= g_Config.m_Cl1v1ModeScoreLimit || m_pClient->m_1v1EnemyScore >= g_Config.m_Cl1v1ModeScoreLimit)
+    {
+        if(time_get() < s_LastScoreTime + time_freq() * 1.5)
+        {
+            const char* pWinnerName = (m_pClient->m_1v1PlayerScore > m_pClient->m_1v1EnemyScore) ? 
+                name : g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy";
+            char aBuf[128];
+            str_format(aBuf, sizeof(aBuf), "%s wins!", pWinnerName);
+            
+            float w = TextRender()->TextWidth(24.0f, aBuf, -1, -1.0f);
+            float Alpha = 1.0f - (float)(time_get() - s_LastScoreTime) / (time_freq() * 1.5);
+            
+            TextRender()->TextColor(1, 1, 1, Alpha);
+            TextRender()->Text(m_Width/2 - w/2, m_Height/3, 24.0f, aBuf, -1.0f);
+            TextRender()->TextColor(1, 1, 1, 1);
+        }
+    }
+    else
+    {
+        if(time_get() < s_LastScoreTime + time_freq() * 1.5)
+        {
+            char aBuf[128];
+            str_format(aBuf, sizeof(aBuf), "%s %d | %d %s", 
+                name, m_pClient->m_1v1PlayerScore, 
+                m_pClient->m_1v1EnemyScore, g_Config.m_Cl1v1ModeEnemyName[0] ? g_Config.m_Cl1v1ModeEnemyName : "Enemy");
+            
+            float w = TextRender()->TextWidth(24.0f, aBuf, -1, -1.0f);
+            float Alpha = 1.0f - (float)(time_get() - s_LastScoreTime) / (time_freq() * 1.5);
+            
+            TextRender()->TextColor(1, 1, 1, Alpha);
+            TextRender()->Text(m_Width/2 - w/2, m_Height/3, 24.0f, aBuf, -1.0f);
+            TextRender()->TextColor(1, 1, 1, 1);
+        }
+    }
 }
+
 
 void CHud::RenderGameTimer()
 {
@@ -666,7 +654,7 @@ void CHud::RenderConnectionWarning()
 	if(Client()->ConnectionProblems())
 	{
 		const char *pText = Localize("AH ASS INTERNET I SEE...");
-		float w = TextRender()->TextWidth(24, pText, -1, -1.0f);
+		float w = TextRender()->TextWidth(14, pText, -1, -1.0f);
 		TextRender()->Text(150 * Graphics()->ScreenAspect() - w / 2, 50, 24, pText, -1.0f);
 	}
 }
@@ -1220,210 +1208,98 @@ void CHud::RenderPlayerState(const int ClientId)
 	}
 }
 
-// void CHud::RenderQuickActions(const int ClientId)
-// {
-//     if(!g_Config.m_ClShowQuickActions || ClientId < 0)
-//         return;
+// Called when you want to show any notification.
+void CHud::ShowNotification(const char *pText, float Duration, float FadeOutTime, ColorRGBA BgColor, ColorRGBA TextColor)
+{
+    // Copy text into local buffer.
+    str_copy(m_NotificationText, pText, sizeof(m_NotificationText));
+    m_NotificationStartTime = time_get();
+    m_NotificationDuration = Duration;
+    // Fade-out time must not exceed the total duration.
+    m_NotificationFadeOutTime = std::min(FadeOutTime, Duration);
+    m_NotificationBgColor = BgColor;
+    m_NotificationTextColor = TextColor;
+    m_NotificationActive = true;
 
-//     // Get player position on screen
-//     vec2 Position;
-//     if(!m_pClient->m_Camera.GetCharacterPosition(ClientId, Position))
-//         return;
+    // Recreate text container with crisp settings.
+    CTextCursor Cursor;
+    float FontSize = 8.0f; // Adjust as needed.
+    TextRender()->SetCursor(&Cursor, 0, 0, FontSize, TEXTFLAG_RENDER | TEXTFLAG_STOP_AT_END);
+    // Set the maximum line width; adapt if needed.
+    Cursor.m_LineWidth = 200.0f;
+    TextRender()->RecreateTextContainer(m_NotificationTextContainerIndex, &Cursor, m_NotificationText);
+}
 
-//     RenderTools()->MapScreenToInterface(m_pClient->m_Camera.m_Center.x, m_pClient->m_Camera.m_Center.y);
 
-//     const float FontSize = 13.0f;
-//     const float Padding = 2.0f;
-//     const float BoxWidth = 100.0f;
-//     const float LineHeight = FontSize + Padding;
-    
-//     // Calculate position above player
-//     float StartY = Position.y - 180.0f; // Offset above player
-//     float StartX = Position.x - BoxWidth/2;
+void CHud::RenderNotification()
+{
+    if (!m_NotificationActive)
+        return;
 
-//     // Background box
-//     Graphics()->DrawRect(StartX, StartY, BoxWidth, LineHeight * 3, ColorRGBA(0,0,0,0.5f), IGraphics::CORNER_ALL, 3.0f);
+    // Calculate elapsed time and disable the notification when expired.
+    int64_t CurrentTime = time_get();
+    float ElapsedTime = (float)(CurrentTime - m_NotificationStartTime) / time_freq();
+    if (ElapsedTime >= m_NotificationDuration)
+    {
+        m_NotificationActive = false;
+        return;
+    }
 
-//     const char* pPlayerName = m_pClient->m_aClients[ClientId].m_aName;
-//     const char* pPlayerClan = m_pClient->m_aClients[ClientId].m_aClan;
+    // Compute the fade factor (applied to both background and text).
+    float fadeFactor = 1.0f;
+    float TimeLeft = m_NotificationDuration - ElapsedTime;
+    if (TimeLeft < m_NotificationFadeOutTime)
+        fadeFactor = std::max(0.0f, TimeLeft / m_NotificationFadeOutTime);
 
-//     if(!s_ShowClanPage) // Player name page
-//     {
-//         // War entry (W key)
-//         {
-//             ColorRGBA WarColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[1]->m_Color)); // Enemy type
-// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
-//             Graphics()->QuadsBegin();
-//             Graphics()->SetColor(WarColor.r, WarColor.g, WarColor.b, 0.5f);
-//             Graphics()->QuadsEnd();
-//             TextRender()->Text(StartX + Padding, StartY, FontSize, "Add War (W)", -1);
-//         }
+    // Use an 8px font for the text.
+    float fontSize = 8.0f;
+    float textWidth = TextRender()->TextWidth(fontSize, m_NotificationText, -1, -1.0f);
 
-//         // Team entry (A key)
-//         {
-//             ColorRGBA TeamColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[2]->m_Color)); // Team type
-// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
-//             Graphics()->QuadsBegin();
-//             Graphics()->SetColor(TeamColor.r, TeamColor.g, TeamColor.b, 0.5f);
-//             Graphics()->QuadsEnd();
-//             TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "Add Team (A)", -1);
-//         }
+    // Calculate BaseY considering active HUD elements.
+    float BaseY = 285.0f; // Starting Y value near the bottom.
+    float Padding = 4.0f;
+    if (g_Config.m_ClShowhudScore && !(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
+        BaseY -= 56 + Padding;
+    if (g_Config.m_ClShowhudDummyActions && !(m_pClient->m_Snap.m_pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER)
+        && Client()->DummyConnected())
+        BaseY -= 29 + Padding;
+    if (g_Config.m_ClShowhudPlayerPosition || g_Config.m_ClShowhudPlayerSpeed || g_Config.m_ClShowhudPlayerAngle)
+        BaseY -= GetMovementInformationBoxHeight() + Padding;
+    if (g_Config.m_ClShowhudSpectatorCount && m_pClient->m_Snap.m_SpecInfo.m_SpectatorCount > 0)
+        BaseY -= 14 + Padding;
 
-//         // Helper entry (D key)
-//         {
-//             ColorRGBA HelperColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[3]->m_Color)); // Helper type 
-// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
-//             Graphics()->QuadsBegin();
-//             Graphics()->SetColor(HelperColor.r, HelperColor.g, HelperColor.b, 0.5f);
-//             Graphics()->QuadsEnd();
-//             TextRender()->Text(StartX + Padding, StartY + LineHeight * 2, FontSize, "Add Helper (D)", -1);
-//         }
-//     }
-//     else // Clan page
-//     {
-//         if(str_comp(pPlayerClan, "") == 0)
-//         {
-//             TextRender()->TextColor(1,0.5f,0.5f,1);
-//             TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "No Clan", -1);
-//             TextRender()->TextColor(1,1,1,1);
-//             return;
-//         }
+    // Set inner padding for the notification box.
+    float paddingX = 4.0f;
+    float paddingY = 2.0f;
+    float boxWidth = textWidth + 2 * paddingX;
+    float boxHeight = fontSize + 2 * paddingY;
 
-//         // War clan entry
-//         {
-//             ColorRGBA WarColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[1]->m_Color));
-// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
-//             Graphics()->QuadsBegin();
-// 			Graphics()->SetColor(WarColor.r, WarColor.g, WarColor.b, 0.5f);
-//             Graphics()->QuadsEnd();
-//             TextRender()->Text(StartX + Padding, StartY, FontSize, "Add War Clan (W)", -1);
-//         }
+    // Position the box flush with the right side.
+    float boxX = m_Width - boxWidth;
+    float boxY = BaseY - boxHeight - Padding;
 
-//         // Team clan entry
-//         {
-//             ColorRGBA TeamColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[2]->m_Color));
-// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
-//             Graphics()->QuadsBegin();
-//             Graphics()->SetColor(TeamColor.r, TeamColor.g, TeamColor.b, 0.5f);
-//             Graphics()->QuadsEnd();
-//             TextRender()->Text(StartX + Padding, StartY + LineHeight, FontSize, "Add Team Clan (A)", -1);
-//         }
+    // Round coordinates for pixel-perfect rendering.
+    boxX = std::round(boxX);
+    boxY = std::round(boxY);
+    float textPosX = std::round(boxX + paddingX);
+    float textPosY = std::round(boxY + paddingY);
 
-//         // Helper clan entry
-//         {
-//             ColorRGBA HelperColor = color_cast<ColorRGBA>(ColorHSLA(GameClient()->m_WarList.m_WarTypes[3]->m_Color));
-// 			Graphics()->TextureSet(IGraphics::CTextureHandle());
-//             Graphics()->QuadsBegin();
-//             Graphics()->SetColor(HelperColor.r, HelperColor.g, HelperColor.b, 0.5f);
-//             Graphics()->QuadsEnd();
-//             TextRender()->Text(StartX + Padding, StartY + LineHeight * 2, FontSize, "Add Helper Clan (D)", -1);
-//         }
-//     }
+    // Prepare the current background and text colors with the fade applied.
+    ColorRGBA currentBgColor = m_NotificationBgColor;
+    currentBgColor.a *= fadeFactor;
+    ColorRGBA currentTextColor = m_NotificationTextColor;
+    currentTextColor.a *= fadeFactor;
 
-// 	if(m_WKeyPressed)
-// 	{
-// 		m_WKeyPressed = false; // Reset after handling
-// 		if(!s_ShowClanPage)
-// 		{
-// 			// Check if player exists in any lists and remove if found
-// 			bool bRemoved = false;
-// 			for(int Type = 1; Type <= 3; Type++)
-// 			{
-// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
-// 				{
-// 					bRemoved = true;
-// 					break;
-// 				}
-// 			}
-			
-// 			if(!bRemoved)
-// 				GameClient()->m_WarList.AddWarEntryInGame(1, pPlayerName, "", false);
-// 		}
-// 		else if(str_comp(pPlayerClan, "") != 0)
-// 		{
-// 			bool bRemoved = false;
-// 			for(int Type = 1; Type <= 3; Type++)
-// 			{
-// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
-// 				{
-// 					bRemoved = true;
-// 					break;
-// 				}
-// 			}
-			
-// 			if(!bRemoved)
-// 				GameClient()->m_WarList.AddWarEntryInGame(1, pPlayerName, "", true);
-// 		}
-// 	}
-// 	else if(m_AKeyPressed)
-// 	{
-// 		m_AKeyPressed = false; // Reset after handling
-// 		if(!s_ShowClanPage)
-// 		{
-// 			bool bRemoved = false;
-// 			for(int Type = 1; Type <= 3; Type++)
-// 			{
-// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
-// 				{
-// 					bRemoved = true;
-// 					break;
-// 				}
-// 			}
-			
-// 			if(!bRemoved)
-// 				GameClient()->m_WarList.AddWarEntryInGame(2, pPlayerName, "", false);
-// 		}
-// 		else if(str_comp(pPlayerClan, "") != 0)
-// 		{
-// 			bool bRemoved = false;
-// 			for(int Type = 1; Type <= 3; Type++)
-// 			{
-// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
-// 				{
-// 					bRemoved = true;
-// 					break;
-// 				}
-// 			}
-			
-// 			if(!bRemoved)
-// 				GameClient()->m_WarList.AddWarEntryInGame(2, pPlayerName, "", true);
-// 		}
-// 	}
-// 	else if(m_DKeyPressed)
-// 	{
-// 		m_DKeyPressed = false; // Reset after handling
-// 		if(!s_ShowClanPage)
-// 		{
-// 			bool bRemoved = false;
-// 			for(int Type = 1; Type <= 3; Type++)
-// 			{
-// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerName))
-// 				{
-// 					bRemoved = true;
-// 					break;
-// 				}
-// 			}
-			
-// 			if(!bRemoved)
-// 				GameClient()->m_WarList.AddWarEntryInGame(3, pPlayerName, "", false);
-// 		}
-// 		else if(str_comp(pPlayerClan, "") != 0)
-// 		{
-// 			bool bRemoved = false;
-// 			for(int Type = 1; Type <= 3; Type++)
-// 			{
-// 				if(GameClient()->m_WarList.RemoveEntryByName(Type, pPlayerClan))
-// 				{
-// 					bRemoved = true;
-// 					break;
-// 				}
-// 			}
-			
-// 			if(!bRemoved)
-// 				GameClient()->m_WarList.AddWarEntryInGame(3, pPlayerName, "", true);
-// 		}
-// 	}
-// }
+    // Draw the background rectangle.
+    // Only the top-left and bottom-left corners will be rounded.
+    Graphics()->DrawRect(boxX, boxY, boxWidth, boxHeight, currentBgColor,
+                           IGraphics::CORNER_TL | IGraphics::CORNER_BL, 2.5f);
+
+    // Render the text (staying crisp with an 8px font).
+    TextRender()->TextColor(currentTextColor.r, currentTextColor.g, currentTextColor.b, currentTextColor.a);
+    TextRender()->Text(textPosX, textPosY, fontSize, m_NotificationText, -1.0f);
+    TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);  // Reset default text color.
+}
 
 void CHud::RenderNinjaBarPos(const float x, float y, const float Width, const float Height, float Progress, const float Alpha)
 {
@@ -2023,11 +1899,6 @@ void CHud::OnRender()
 			{
 				RenderPlayerState(SpectatorId);
 			}
-			// Todo:
-			// if(SpectatorId != SPEC_FREEVIEW && g_Config.m_ClShowQuickActions)
-			// {
-			// 	RenderQuickActions(SpectatorId);
-			// }
 			RenderMovementInformation();
 			RenderSpectatorHud();
 		}
@@ -2049,8 +1920,46 @@ void CHud::OnRender()
 		if(g_Config.m_ClShowRecord)
 			RenderRecord();
 		Render1v1Hud();
+
+		RenderNotification();
 	}
 	RenderCursor();
+
+	// move up to not interfere with the other hud elements
+
+	if (g_Config.m_ClSoloHud)
+	{
+		CCharacterCore *pCharacter = &m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientId].m_Predicted;
+		// Define the new solo state (0 for solo, 1 for non-solo)
+		int NewSoloState = pCharacter->m_Solo ? 0 : 1;
+		
+		// Only handle a state change when there's a difference
+		if (NewSoloState != m_lastSoloState)
+		{
+			ShowSoloState(NewSoloState);
+			m_lastSoloState = NewSoloState;
+		}
+	}	
+}
+
+void CHud::ShowSoloState(int State)
+{
+    // Define fixed parameters for consistency.
+    const float duration = 2.5f;  // Total notification duration.
+    const float fadeTime = 1.0f;  // Time taken to fade out.
+    
+    // Set up colors to ensure crisp, white text and an opaque background.
+    ColorRGBA bgColor(0.f, 0.f, 0.f, 0.45f); // A darker, more visible background.
+    ColorRGBA textColor(1.f, 1.f, 1.f, 1.f);  // White text.
+    
+    // Reset the notification timer right here.
+    m_NotificationStartTime = time_get();
+    
+    // Depending on the state, call the notification function with an appropriate message.
+    if (State == 0)
+        ShowNotification("Entered Solo", duration, fadeTime, bgColor, textColor);
+    else if (State == 1)
+        ShowNotification("Left Solo", duration, fadeTime, bgColor, textColor);
 }
 
 void CHud::OnMessage(int MsgType, void *pRawMsg)
@@ -2215,67 +2124,4 @@ void CHud::RenderRecord()
 		str_format(aBuf, sizeof(aBuf), "%s%s", PlayerRecord > 3600 ? "" : "   ", aTime);
 		TextRender()->Text(53, 82, 6, aBuf, -1.0f);
 	}
-}
-
-
-bool CHud::OnInput(const IInput::CEvent &Event)
-{
-    // Only handle input when spectating and quick actions are enabled
-    if(!m_pClient->m_Snap.m_SpecInfo.m_Active || !g_Config.m_ClShowQuickActions)
-        return false;
-        
-    int SpectatorId = m_pClient->m_Snap.m_SpecInfo.m_SpectatorId;
-    if(SpectatorId == SPEC_FREEVIEW)
-        return false;
-
-    if(Event.m_Flags & IInput::FLAG_PRESS)
-    {
-        if(Event.m_Key == KEY_W)
-        {
-            m_WKeyPressed = true;
-            return true;
-        }
-        else if(Event.m_Key == KEY_A)
-        {
-            m_AKeyPressed = true;
-            return true;
-        }
-        else if(Event.m_Key == KEY_D)
-        {
-            m_DKeyPressed = true;
-            return true;
-        }
-        else if(Event.m_Key == KEY_S && Client()->GameTick(g_Config.m_ClDummy) - m_LastPressedTick > Client()->GameTickSpeed()/2)
-        {
-            m_SKeyPressed = true;
-            s_ShowClanPage = !s_ShowClanPage;
-            m_LastPressedTick = Client()->GameTick(g_Config.m_ClDummy);
-            return true;
-        }
-    }
-    else if(Event.m_Flags & IInput::FLAG_RELEASE)
-    {
-        if(Event.m_Key == KEY_W)
-        {
-            m_WKeyPressed = false;
-            return true;
-        }
-        else if(Event.m_Key == KEY_A)
-        {
-            m_AKeyPressed = false;
-            return true;
-        }
-        else if(Event.m_Key == KEY_D)
-        {
-            m_DKeyPressed = false;
-            return true;
-        }
-        else if(Event.m_Key == KEY_S)
-        {
-            m_SKeyPressed = false;
-            return true;
-        }
-    }
-
-    return false;
 }

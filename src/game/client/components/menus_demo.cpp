@@ -55,6 +55,34 @@ int CMenus::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pT
 	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
 }
 
+int CMenus::DoButton_FontIconColor(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, ColorRGBA Color)
+{
+	pRect->Draw(ColorRGBA(Color.r, Color.g, Color.b, (Checked ? 0.10f : 0.5f) * Ui()->ButtonColorMul(pButtonContainer)), Corners, 5.0f);
+
+	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING);
+	TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
+	CUIRect Temp;
+	pRect->HMargin(2.0f, &Temp);
+	Ui()->DoLabel(&Temp, pText, Temp.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+
+	if(!Enabled)
+	{
+		TextRender()->TextColor(ColorRGBA(1.0f, 0.0f, 0.0f, 1.0f));
+		TextRender()->TextOutlineColor(ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f));
+		Ui()->DoLabel(&Temp, FONT_ICON_SLASH, Temp.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		TextRender()->TextOutlineColor(TextRender()->DefaultTextOutlineColor());
+		TextRender()->TextColor(TextRender()->DefaultTextColor());
+	}
+
+	TextRender()->SetRenderFlags(0);
+	TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+
+	return Ui()->DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
+}
+
+
 bool CMenus::DemoFilterChat(const void *pData, int Size, void *pUser)
 {
 	bool DoFilterChat = *(bool *)pUser;

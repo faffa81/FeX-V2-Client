@@ -11,6 +11,8 @@
 #include <game/server/score.h>
 #include <game/version.h>
 
+#include "game/client/components/hud.h"
+
 #define GAME_TYPE_NAME "DDraceNetwork"
 #define TEST_TYPE_NAME "TestDDraceNetwork"
 
@@ -99,16 +101,19 @@ void CGameControllerDDRace::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
 		GameServer()->SendChatTeam(GameServer()->GetDDRaceTeam(ClientId), "Your team was unlocked by an unlock team tile");
 	}
 
-	// solo part
-	if(((TileIndex == TILE_SOLO_ENABLE) || (TileFIndex == TILE_SOLO_ENABLE)) && !Teams().m_Core.GetSolo(ClientId))
+	if(!g_Config.m_ClSoloHud)
 	{
-		GameServer()->SendChatTarget(ClientId, "You are now in a solo part");
-		pChr->SetSolo(true);
-	}
-	else if(((TileIndex == TILE_SOLO_DISABLE) || (TileFIndex == TILE_SOLO_DISABLE)) && Teams().m_Core.GetSolo(ClientId))
-	{
-		GameServer()->SendChatTarget(ClientId, "You are now out of the solo part");
-		pChr->SetSolo(false);
+		// solo part
+		if(((TileIndex == TILE_SOLO_ENABLE) || (TileFIndex == TILE_SOLO_ENABLE)) && !Teams().m_Core.GetSolo(ClientId))
+		{
+			GameServer()->SendChatTarget(ClientId, "You are now in a solo part");
+			pChr->SetSolo(true);
+		}
+		else if(((TileIndex == TILE_SOLO_DISABLE) || (TileFIndex == TILE_SOLO_DISABLE)) && Teams().m_Core.GetSolo(ClientId))
+		{
+			GameServer()->SendChatTarget(ClientId, "You are now out of the solo part");
+			pChr->SetSolo(false);
+		}
 	}
 }
 

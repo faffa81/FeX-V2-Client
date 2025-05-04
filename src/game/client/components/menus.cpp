@@ -37,6 +37,15 @@
 #include <game/generated/client_data.h>
 #include <game/localization.h>
 
+#include <game/client/components/fex/fexversion.h>
+
+#include <cstdlib>
+
+void ForceQuit()
+{
+    exit(0);
+}
+
 #include "menus.h"
 
 using namespace FontIcons;
@@ -52,6 +61,8 @@ ColorRGBA CMenus::ms_ColorTabbarHover;
 ColorRGBA CMenus::ms_ColorTabbarInactiveIngame;
 ColorRGBA CMenus::ms_ColorTabbarActiveIngame;
 ColorRGBA CMenus::ms_ColorTabbarHoverIngame;
+
+CMenus::EFadeState m_FadeState = CMenus::FADE_IN;
 
 float CMenus::ms_ButtonHeight = 25.0f;
 float CMenus::ms_ListheaderHeight = 17.0f;
@@ -780,6 +791,106 @@ void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 	}
 }
 
+void CMenus::RenderCenteredLabel(const char* pTitle, const char* pText)
+{
+    CUIRect ScreenRect = *Ui()->Screen();
+    CUIRect Center;
+    ScreenRect.HSplitBottom(100.0f, &Center, nullptr);
+    Ui()->DoLabel(&Center, pTitle, 20.0f, TEXTALIGN_MC);
+    Center.HSplitTop(30.0f, &Center, nullptr);
+    Ui()->DoLabel(&Center, pText, 16.0f, TEXTALIGN_MC);
+}
+
+
+void CMenus::RenderFadeLoadingScreen()
+{
+    int64_t now = time_get();
+    float elapsed = (now - m_FadeStateStartTime) / (float)time_freq();
+
+    if(m_FadeState == FADE_IN)
+    {
+        if(elapsed < 2.0f)
+            m_FadeAlpha = elapsed / 2.0f;
+        else
+        {
+            m_FadeAlpha = 1.0f;
+            m_FadeState = WAIT;
+            m_FadeStateStartTime = now;
+        }
+    }
+    else if(m_FadeState == WAIT)
+    {
+        m_FadeAlpha = 1.0f;
+        if(!g_Config.m_ClFirstLaunch)
+        {
+            if(elapsed >= 4.0f)
+            {
+                m_FadeState = FADE_OUT;
+                m_FadeStateStartTime = now;
+            }
+        }
+        else
+        {
+			if(elapsed >= 15.0f)
+			{
+				m_FadeState = FADE_OUT;
+				m_FadeStateStartTime = now;
+			}
+        }
+    }
+    else if(m_FadeState == FADE_OUT)
+    {
+        if(elapsed < 2.0f)
+            m_FadeAlpha = 1.0f - (elapsed / 2.0f);
+        else
+        {
+            m_FadeAlpha = 0.0f;
+            m_FadeState = DONE;
+        }
+    }
+
+    CUIRect screenRect = *Ui()->Screen();
+    screenRect.Draw(ColorRGBA(0, 0, 0, 1), IGraphics::CORNER_NONE, 0.0f);
+
+    CUIRect logoRect;
+    logoRect.w = 300.0f;
+    logoRect.h = 100.0f;
+    logoRect.x = screenRect.x + (screenRect.w - logoRect.w) / 2.0f;
+    logoRect.y = screenRect.y + (screenRect.h - logoRect.h) / 2.0f - 80.0f;
+
+    Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
+    Graphics()->QuadsBegin();
+    Graphics()->SetColor(1.0f, 1.0f, 1.0f, m_FadeAlpha);
+    IGraphics::CQuadItem q(logoRect.x, logoRect.y, logoRect.w, logoRect.h);
+    Graphics()->QuadsDrawTL(&q, 1);
+    Graphics()->QuadsEnd();
+
+    CUIRect versionRect;
+    versionRect.x = logoRect.x;
+    versionRect.y = logoRect.y + logoRect.h + 10.0f;
+    versionRect.w = logoRect.w;
+    versionRect.h = 20.0f;
+    char aVersion[128];
+    str_format(aVersion, sizeof(aVersion), "%s", FEX_RELEASE_VERSION);
+    TextRender()->TextColor(1.0f, 1.0f, 1.0f, m_FadeAlpha);
+    Ui()->DoLabel(&versionRect, aVersion, 16.0f, TEXTALIGN_MC);
+    TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+	if(g_Config.m_ClFirstLaunch)
+	{
+    	RenderCenteredLabel("Welcome to FeX", "Enjoy the new experience!");
+	}
+    CUIRect instrBottom;
+    instrBottom.x = screenRect.x;
+    instrBottom.y = screenRect.y + screenRect.h - 40.0f;
+    instrBottom.w = screenRect.w;
+    instrBottom.h = 20.0f;
+    Ui()->DoLabel(&instrBottom, "FeX Loading...", 12.0f, TEXTALIGN_MC);
+
+    Client()->UpdateAndSwap();
+}
+
+
 void CMenus::RenderLoading(const char *pCaption, const char *pContent, int IncreaseCounter)
 {
 	// TODO: not supported right now due to separate render thread
@@ -883,6 +994,8 @@ void CMenus::RenderNews(CUIRect MainView)
 
 void CMenus::OnInit()
 {
+	// BackupActiveConfigOnJoin(true);
+	// BackupActiveConfigOnJoin(false);
 	if(g_Config.m_ClShowWelcome)
 	{
 		m_Popup = POPUP_LANGUAGE;
@@ -953,6 +1066,14 @@ void CMenus::OnInit()
 	m_DirectionQuadContainerIndex = Graphics()->CreateQuadContainer(false);
 	RenderTools()->QuadContainerAddSprite(m_DirectionQuadContainerIndex, 0.f, 0.f, 22.f);
 	Graphics()->QuadContainerUpload(m_DirectionQuadContainerIndex);
+
+	// m_SelectedDdnetConfig = -1;
+	// m_SelectedFexConfig = -1;
+	// m_NeedConfigListUpdate = true;
+	// m_aConfigToDelete[0] = '\0';
+	// m_ConfigToDeleteIsFex = false;
+	// m_aConfigToLoad[0] = '\0';
+	// m_ConfigToLoadIsFex = false;
 }
 
 void CMenus::ConchainBackgroundEntities(IConsole::IResult *pResult, void *pUserData, IConsole::FCommandCallback pfnCallback, void *pCallbackUserData)
@@ -1121,6 +1242,7 @@ void CMenus::Render()
 	{
 	case IClient::STATE_QUITTING:
 	case IClient::STATE_RESTARTING:
+	case IClient::STATE_RESTARTING_NOSAVE:
 		// Render nothing except menu background. This should not happen for more than one frame.
 		return;
 
