@@ -1188,57 +1188,61 @@ void CMenus::RenderVisualFex(CUIRect MainView)
 				}
 			}
 		}
+
+		{
+			StartMenu.HSplitTop(10.0f, nullptr, &StartMenu);
+			StartMenu.HSplitTop(175.0f, &StartMenu, nullptr);
+			if(s_ScrollRegion.AddRect(StartMenu))
+			{
+				StartMenu.Draw(ColorRGBA(1,1,1,0.25f), IGraphics::CORNER_ALL, 5.0f);
+				StartMenu.Margin(Margin, &StartMenu);
+				CUIRect Header, Row;
+				StartMenu.HSplitTop(20.0f, &Header, &StartMenu);
+				Ui()->DoLabel(&Header, "Start Menu Settings", 14.0f, TEXTALIGN_ML);
+		
+				StartMenu.HSplitTop(20.0f, &Row, &StartMenu);
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClStartMenuFrames, Localize("Show Frames"), &g_Config.m_ClStartMenuFrames, &Row, LineSize);
+		
+				DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClStartMenuInfo, Localize("Show Player Info"), &g_Config.m_ClStartMenuInfo, &Row, LineSize);
+		
+				StartMenu.HSplitTop(25.0f, &Row, &StartMenu);
+				static std::vector<const char *> s_StartMenuDropDownNames;
+				s_StartMenuDropDownNames = {Localize("Dark"), Localize("Light"), Localize("Custom")};
+				static CUi::SDropDownState s_StartMenuDropDownState;
+				static CScrollRegion s_StartMenuDropDownScrollRegion;
+				s_StartMenuDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_StartMenuDropDownScrollRegion;
+				int StartMenuSelectedOld = g_Config.m_ClStartMenuTheme - 1;
+				CUIRect StartMenuDropDownRect;
+				StartMenu.HSplitTop(LineSize, &StartMenuDropDownRect, &VisualSettings);
+				const int StartMenuSelectedNew = Ui()->DoDropDown(&StartMenuDropDownRect, StartMenuSelectedOld, s_StartMenuDropDownNames.data(), s_StartMenuDropDownNames.size(), s_StartMenuDropDownState);
+				if(StartMenuSelectedOld != StartMenuSelectedNew)
+				{
+					g_Config.m_ClStartMenuTheme = StartMenuSelectedNew + 1;
+					StartMenuSelectedOld = StartMenuSelectedNew;
+					dbg_msg("FeX[start menu]:", "Start menu mode changed to %d", g_Config.m_ClStartMenuTheme);
+				}
+
+				StartMenu.HSplitTop(25.0f, &Row, &StartMenu);
+		
+				if(StartMenuSelectedNew == 2)
+				{
+					StartMenu.HSplitTop(25.0f, &Row, &StartMenu);
+					static CButtonContainer s_StartMenuColorPicker;
+					DoLine_ColorPicker(&s_StartMenuColorPicker,
+						ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing,
+						&Row, "Menu Color", &g_Config.m_ClStartMenuColor, ColorRGBA(1,1,1,1), true);
+					
+					StartMenu.HSplitTop(25.0f, &Row, &StartMenu);
+					static CButtonContainer s_StartMenuTextColorPicker;
+					DoLine_ColorPicker(&s_StartMenuTextColorPicker,
+						ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing,
+						&Row, "Text Color", &g_Config.m_ClStartMenuTextColor, ColorRGBA(1,1,1,1), true);
+				}
+			}
+		}
 	}
 
-	StartMenu.HSplitTop(10.0f, nullptr, &StartMenu);
-	StartMenu.HSplitTop(150.0f, &StartMenu, nullptr);
-	if(s_ScrollRegion.AddRect(StartMenu))
-	{
-		StartMenu.Draw(ColorRGBA(1,1,1,0.25f), IGraphics::CORNER_ALL, 5.0f);
-		StartMenu.Margin(Margin, &StartMenu);
-		CUIRect Header, Row;
-		StartMenu.HSplitTop(20.0f, &Header, &StartMenu);
-		Ui()->DoLabel(&Header, "Start Menu Settings", 14.0f, TEXTALIGN_ML);
 
-		StartMenu.HSplitTop(20.0f, &Row, &StartMenu);
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClStartMenuFrames,
-			"Show Frames", &g_Config.m_ClStartMenuFrames, &Row, 14.0f);
-
-		DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClStartMenuInfo,
-			"Show Player Info", &g_Config.m_ClStartMenuInfo, &Row, 14.0f);
-
-		StartMenu.HSplitTop(20.0f, &Row, &StartMenu);
-		static std::vector<const char *> s_StartMenuDropDownNames;
-		s_StartMenuDropDownNames = {Localize("Dark"), Localize("Light"), Localize("Custom")};
-		static CUi::SDropDownState s_StartMenuDropDownState;
-		static CScrollRegion s_StartMenuDropDownScrollRegion;
-		s_StartMenuDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_StartMenuDropDownScrollRegion;
-		int StartMenuSelectedOld = g_Config.m_ClStartMenuTheme - 1;
-		CUIRect StartMenuDropDownRect;
-		StartMenu.HSplitTop(LineSize, &StartMenuDropDownRect, &VisualSettings);
-		const int StartMenuSelectedNew = Ui()->DoDropDown(&StartMenuDropDownRect, StartMenuSelectedOld, s_StartMenuDropDownNames.data(), s_StartMenuDropDownNames.size(), s_StartMenuDropDownState);
-		if(StartMenuSelectedOld != StartMenuSelectedNew)
-		{
-			g_Config.m_ClStartMenuTheme = StartMenuSelectedNew + 1;
-			StartMenuSelectedOld = StartMenuSelectedNew;
-			dbg_msg("FeX[start menu]:", "Start menu mode changed to %d", g_Config.m_ClStartMenuTheme);
-		}
-
-		if(StartMenuSelectedNew == 2)
-		{
-			StartMenu.HSplitTop(20.0f, &Row, &StartMenu);
-			static CButtonContainer s_StartMenuColorPicker;
-			DoLine_ColorPicker(&s_StartMenuColorPicker,
-				ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing,
-				&Row, "Menu Color", &g_Config.m_ClStartMenuColor, ColorRGBA(1,1,1,1), true);
-			
-			StartMenu.HSplitTop(20.0f, &Row, &StartMenu);
-			static CButtonContainer s_StartMenuTextColorPicker;
-			DoLine_ColorPicker(&s_StartMenuTextColorPicker,
-				ColorPickerLineSize, ColorPickerLabelSize, ColorPickerLineSpacing,
-				&Row, "Text Color", &g_Config.m_ClStartMenuTextColor, ColorRGBA(1,1,1,1), true);
-		}
-	}
 	s_ScrollRegion.End();
 }
 

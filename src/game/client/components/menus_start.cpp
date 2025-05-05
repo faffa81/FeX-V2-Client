@@ -74,7 +74,8 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	int NewPage = -1;
 
 	RenderBar(MainView);
-	RenderPlayerPanelTopRight(MainView);
+	if(g_Config.m_ClStartMenuInfo)
+		RenderPlayerPanelTopRight(MainView);
 
 	CUIRect ExtMenu, ExtMenuFrame;
 	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
@@ -260,7 +261,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 
 
 	char DDNETRL[128];
-	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s | %s: %s"), CLIENT_NAME, GAME_NAME, GAME_RELEASE_VERSION);
+	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s | %s: %s"), CLIENT_NAME, GAME_NAME, FEX_RELEASE_VERSION);
 	Ui()->DoLabel(&CurVersion, DDNETRL, 15.0f / scale, TEXTALIGN_MR);
 
 	static CButtonContainer s_VersionButton;

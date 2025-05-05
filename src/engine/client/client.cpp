@@ -51,6 +51,7 @@
 
 #include <game/localization.h>
 #include <game/version.h>
+#include <game/client/components/fex/fexversion.h>
 
 #include "client.h"
 #include "demoedit.h"
@@ -486,6 +487,19 @@ void CClient::OnEnterGame(bool Dummy)
 
 	GameClient()->OnEnterGame();
 }
+
+void CClient::SendFeXInfo(bool Dummy)
+ {
+ 	CMsgPacker Msg(NETMSG_IAMFEX, true);
+ 	Msg.AddInt(FEX_VERSION_NUMBER);
+ 	Msg.AddString(
+ 		"FeX " FEX_RELEASE_VERSION
+ 		" (DDNet " GAME_VERSION
+ 		", built on " FEX_BUILD_DATE
+ 		")",
+ 		0);
+ 	SendMsg(Dummy, &Msg, MSGFLAG_VITAL);
+ }
 
 void CClient::EnterGame(int Conn)
 {
@@ -2634,6 +2648,8 @@ void CClient::PumpNetwork()
 		{
 			// we switched to online
 			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "client", "connected, sending info", gs_ClientNetworkPrintColor);
+			m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX", "connected, sending FeX info", gs_ClientNetworkPrintColor);
+			SendFeXInfo(CONN_MAIN);
 			SetState(IClient::STATE_LOADING);
 			SetLoadingStateDetail(IClient::LOADING_STATE_DETAIL_INITIAL);
 			SendInfo(CONN_MAIN);
@@ -3263,6 +3279,7 @@ void CClient::Run()
 		// progress on dummy connect when the connection is online
 		if(m_DummySendConnInfo && m_aNetClient[CONN_DUMMY].State() == NETSTATE_ONLINE)
 		{
+			SendFeXInfo(CONN_DUMMY);
 			m_DummySendConnInfo = false;
 			SendInfo(CONN_DUMMY);
 			m_aNetClient[CONN_DUMMY].Update();

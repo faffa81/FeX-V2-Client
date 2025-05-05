@@ -326,6 +326,7 @@ public:
 
 	// called when the map is loaded and we should init for a new round
 	void OnEnterGame(bool Dummy);
+	void SendFeXInfo(bool Dummy);
 	void EnterGame(int Conn) override;
 
 	void Connect(const char *pAddress, const char *pPassword = nullptr) override;

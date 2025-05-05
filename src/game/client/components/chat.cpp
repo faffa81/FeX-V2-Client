@@ -1442,7 +1442,6 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 		{
 			bool PlaySound = m_aLines[m_CurrentLine].m_Team ? g_Config.m_SndTeamChat : g_Config.m_SndChat;
 
-			bool PlaySound = CurrentLine.m_Team ? g_Config.m_SndTeamChat : g_Config.m_SndChat;
 #if defined(CONF_VIDEORECORDER)
 			if(IVideo::Current())
 			{
