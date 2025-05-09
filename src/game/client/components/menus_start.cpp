@@ -83,7 +83,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	ExtMenu.VSplitLeft(100.0f, &ExtMenu, nullptr);
 	ExtMenuFrame.VSplitLeft(100.0f, &ExtMenuFrame, nullptr);
 	ExtMenuFrame.VMargin(-5.25f, &ExtMenuFrame);
-	ExtMenuFrame.HSplitBottom(125.0f, nullptr, &ExtMenuFrame);
+	ExtMenuFrame.HSplitBottom(150.0f, nullptr, &ExtMenuFrame);
 	ExtMenuFrame.HSplitBottom(-5.0f, &ExtMenuFrame, nullptr);
 	if(g_Config.m_ClStartMenuFrames)
 	{
@@ -148,6 +148,12 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	static CButtonContainer s_NewsButton;
 	if(DoButton_Menu(&s_NewsButton, Localize("News"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorA) || CheckHotKey(KEY_N))
 		NewPage = PAGE_NEWS;
+
+	ExtMenu.HSplitBottom(5.0f, &ExtMenu, nullptr); // little space
+	ExtMenu.HSplitBottom(20.0f, &ExtMenu, &Button);
+	static CButtonContainer s_UpdateButton;
+	if(DoButton_Menu(&s_UpdateButton, Localize("FeX Updates"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, g_Config.m_UiUnreadNews ? ColorRGBA(0.0f, 1.0f, 0.0f, 0.25f) : ColorA) || CheckHotKey(KEY_N))
+		NewPage = PAGE_UPDATES;
 
 	CUIRect Menu, MenuFrame, MenuFrameDown;
 	MainView.VMargin(VMargin, &Menu);
@@ -261,8 +267,12 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 
 
 	char DDNETRL[128];
-	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s | %s: %s"), CLIENT_NAME, GAME_NAME, FEX_RELEASE_VERSION);
-	Ui()->DoLabel(&CurVersion, DDNETRL, 15.0f / scale, TEXTALIGN_MR);
+	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s: %s"), GAME_NAME, GAME_RELEASE_VERSION);
+	char FEXRL[128];
+	str_format(FEXRL, sizeof(FEXRL), Localize("%s: %s"), CLIENT_NAME, FEX_RELEASE_VERSION);
+	Ui()->DoLabel(&CurVersion, DDNETRL, 12.0f / scale, TEXTALIGN_LEFT);
+	CurVersion.HSplitTop(20.0f / scale, nullptr, &CurVersion);
+	Ui()->DoLabel(&CurVersion, FEXRL, 12.0f / scale, TEXTALIGN_LEFT);
 
 	static CButtonContainer s_VersionButton;
 	if(DoButton_Menu(&s_VersionButton, Localize("FeX Versions"), 0, &VersionButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))

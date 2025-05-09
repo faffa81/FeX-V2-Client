@@ -15,7 +15,9 @@ using std::string;
 // Helper: Build updater URL given the file and release tag.
 static const char *BuildUpdaterUrl(char *pBuf, int BufSize, const char *pFile, const char *pTag)
 {
+    CConsole *m_pConsole;
     str_format(pBuf, BufSize, "https://github.com/faffa81/FeX-V2-Client/releases/download/%s/%s", pTag, pFile);
+    m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX[updater]", pBuf);
     return pBuf;
 }
 
@@ -87,7 +89,7 @@ void CFexUpdater::OnInit()
     m_pClient = Kernel()->RequestInterface<IClient>();
     m_pStorage = Kernel()->RequestInterface<IStorage>();
     m_pEngine = Kernel()->RequestInterface<IEngine>();
-    // Note: m_pHttp should already be set via an earlier Init(CHttp *) call.
+	m_pHttp = Kernel()->RequestInterface<CHttp>();
 }
 
 void CFexUpdater::SetCurrentState(EFexUpdaterState NewState)
@@ -108,6 +110,11 @@ void CFexUpdater::FetchFile(const char *pFile, const char *pDestPath)
     m_pCurrentTask = std::make_shared<CFexUpdaterFetchTask>(this, pFile, pDestPath);
     str_copy(m_aStatus, m_pCurrentTask->Dest(), sizeof(m_aStatus));
     m_pHttp->Run(m_pCurrentTask);
+    if (!m_pHttp)
+    {
+        dbg_msg("FeX[updater]", "ERROR: m_pHttp is not initialized!");
+        return;
+    }
 }
 
 void CFexUpdater::InitiateUpdate()
@@ -117,7 +124,7 @@ void CFexUpdater::InitiateUpdate()
     m_pCurrentTask = HttpGet(pManifestUrl);
     if(!m_pCurrentTask)
     {
-        dbg_msg("updater", "HttpGet returned null for URL: %s", pManifestUrl);
+        dbg_msg("FeX[updater]", "HttpGet returned null for URL: %s", pManifestUrl);
         SetCurrentState(FEX_UPDATER_FAIL);
         return;
     }
@@ -190,10 +197,10 @@ void CFexUpdater::OnRender()
         CommitUpdate();
         break;
     case FEX_UPDATER_FAIL:
-        dbg_msg("fexupdater", "Update failed: %s", m_aStatus);
+        dbg_msg("FeX[updater]", "Update failed: %s", m_aStatus);
         break;
     case FEX_UPDATER_NEED_RESTART:
-        dbg_msg("fexupdater", "Update applied; please restart FeX");
+        dbg_msg("FeX[updater]", "Update applied; please restart FeX");
         break;
     case FEX_UPDATER_CLEAN:
     default:
@@ -325,7 +332,7 @@ bool CFexUpdater::MoveFile(const char *pFile)
 
 bool CFexUpdater::ReplaceClient()
 {
-    dbg_msg("updater", "replacing " PLAT_CLIENT_EXEC);
+    dbg_msg("FeX[updater]", "replacing " PLAT_CLIENT_EXEC);
     bool Success = true;
     char aPath[IO_MAX_PATH_LENGTH];
 
@@ -339,7 +346,7 @@ bool CFexUpdater::ReplaceClient()
     str_format(aBuf, sizeof(aBuf), "chmod +x %s", aPath);
     if(system(aBuf))
     {
-        dbg_msg("updater", "ERROR: failed to set client executable bit");
+        dbg_msg("FeX[updater]", "ERROR: failed to set client executable bit");
         Success = false;
     }
 #endif
@@ -348,7 +355,7 @@ bool CFexUpdater::ReplaceClient()
 
 bool CFexUpdater::ReplaceServer()
 {
-    dbg_msg("updater", "replacing " PLAT_SERVER_EXEC);
+    dbg_msg("FeX[updater]", "replacing " PLAT_SERVER_EXEC);
     bool Success = true;
     char aPath[IO_MAX_PATH_LENGTH];
 
@@ -362,7 +369,7 @@ bool CFexUpdater::ReplaceServer()
     str_format(aBuf, sizeof(aBuf), "chmod +x %s", aPath);
     if(system(aBuf))
     {
-        dbg_msg("updater", "ERROR: failed to set server executable bit");
+        dbg_msg("FeX[updater]", "ERROR: failed to set server executable bit");
         Success = false;
     }
 #endif

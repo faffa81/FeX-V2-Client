@@ -59,6 +59,7 @@
 #include "notifications.h"
 #include "serverbrowser.h"
 
+
 #if defined(CONF_VIDEORECORDER)
 #include "video.h"
 #endif
@@ -489,17 +490,257 @@ void CClient::OnEnterGame(bool Dummy)
 }
 
 void CClient::SendFeXInfo(bool Dummy)
- {
- 	CMsgPacker Msg(NETMSG_IAMFEX, true);
- 	Msg.AddInt(FEX_VERSION_NUMBER);
- 	Msg.AddString(
- 		"FeX " FEX_RELEASE_VERSION
- 		" (DDNet " GAME_VERSION
- 		", built on " FEX_BUILD_DATE
- 		")",
- 		0);
- 	SendMsg(Dummy, &Msg, MSGFLAG_VITAL);
- }
+{
+	CMsgPacker Msg(NETMSG_IAMFEX, true);
+	Msg.AddInt(FEX_VERSION_NUMBER);
+	Msg.AddString(
+		"FeX " FEX_RELEASE_VERSION
+		" (DDNet " GAME_VERSION
+		", built on " FEX_BUILD_DATE
+		")",
+		0);
+	SendMsg(Dummy, &Msg, MSGFLAG_VITAL);
+}
+
+static void ProcessLine(char *pLine, bool &rBold, bool &rHeader)
+{
+    rBold = false;
+    rHeader = false;
+
+    if (strncmp(pLine, "<b>", 3) == 0)
+    {
+        rBold = true;
+        memmove(pLine, pLine + 3, strlen(pLine + 3) + 1);
+    }
+    if (strncmp(pLine, "<u>", 8) == 0)
+    {
+        rHeader = true;
+        memmove(pLine, pLine + 8, strlen(pLine + 8) + 1);
+    }
+
+    char *dst = pLine;
+    bool inTag = false;
+    for (char *src = pLine; *src; src++)
+    {
+        if (*src == '<')
+        {
+            inTag = true;
+            continue;
+        }
+        if (*src == '>')
+        {
+            inTag = false;
+            continue;
+        }
+        if (!inTag)
+        {
+            *dst++ = *src;
+        }
+    }
+    *dst = '\0';
+
+    while (*pLine && (*pLine == ' ' || *pLine == '\t' || *pLine == '\n' || *pLine == '\r'))
+        memmove(pLine, pLine + 1, strlen(pLine) + 1);
+
+    int len = (int)strlen(pLine);
+    while (len > 0 &&
+           (pLine[len - 1] == ' ' || pLine[len - 1] == '\t' ||
+            pLine[len - 1] == '\n' || pLine[len - 1] == '\r'))
+    {
+        pLine[len - 1] = '\0';
+        len--;
+    }
+}
+
+void ParseFormattedLines(const char *pContent, std::vector<CClient::SUpdateLog::SLine> &vLines)
+{
+    const char *pLineStart = pContent;
+    char aLineBuffer[256];
+
+    while (*pLineStart)
+    {
+        const char *pEndLine = strchr(pLineStart, '\n');
+        int lineLen = pEndLine ? static_cast<int>(pEndLine - pLineStart) : (int)strlen(pLineStart);
+        if (lineLen >= 255)
+            lineLen = 255;
+		memcpy(aLineBuffer, pLineStart, lineLen);
+		aLineBuffer[lineLen] = '\0';
+
+
+        CClient::SUpdateLog::SLine line;
+        ProcessLine(aLineBuffer, line.m_bBold, line.m_bHeader);
+        str_copy(line.m_aText, aLineBuffer, sizeof(line.m_aText));
+
+        if (line.m_aText[0] != '\0')
+            vLines.push_back(line);
+
+        if (pEndLine)
+            pLineStart = pEndLine + 1;
+        else
+            break;
+    }
+}
+
+
+void ParseVersion(const char *verStr, int &major, int &minor, int &patch)
+{
+    int dotCount = 0;
+    for (const char* p = verStr; *p; p++)
+    {
+        if (*p == '.')
+            dotCount++;
+    }
+
+    if (dotCount >= 2)
+    {
+        sscanf(verStr, "%d.%d.%d", &major, &minor, &patch);
+    }
+    else if (dotCount == 1)
+    {
+        sscanf(verStr, "%d.%d", &major, &minor);
+        int clientMajor = 0, clientMinor = 0, clientPatch = 0;
+        sscanf(FEX_RELEASE_VERSION, "%d.%d.%d", &clientMajor, &clientMinor, &clientPatch);
+        if (clientMajor == major && clientMinor == minor)
+        {
+            patch = clientPatch;
+        }
+        else
+        {
+            patch = 0;
+        }
+    }
+    else
+    {
+        major = atoi(verStr);
+        minor = 0;
+        patch = 0;
+    }
+}
+
+void CClient::ParseUpdateLogs()
+{
+    {
+        std::lock_guard<std::mutex> lock(m_UpdateLogMutex);
+        m_TabContents.m_vUpdateLogs.clear();
+    }
+
+    NETADDR Addr;
+    if (net_host_lookup("faffa81.github.io", &Addr, NETTYPE_IPV4) != 0)
+    {
+        dbg_msg("client", "Failed to resolve update logs host");
+        return;
+    }
+
+    std::shared_ptr<CHttpRequest> pRequest = HttpGet("https://faffa81.github.io/faffaSite/updatelogs.txt");
+    if (!pRequest)
+    {
+        dbg_msg("client", "Failed to create HTTP request for update logs");
+        return;
+    }
+    Http()->Run(pRequest);
+
+    const int64_t StartTime = time_get();
+    const int64_t TimeoutMs = 5000;
+    while (pRequest->State() == EHttpState::RUNNING || pRequest->State() == EHttpState::QUEUED)
+    {
+        if (time_get() > StartTime + (TimeoutMs * time_freq() / 1000))
+        {
+            dbg_msg("client", "Update logs download timed out");
+            return;
+        }
+        net_socket_read_wait(m_aNetClient[CONN_MAIN].m_Socket, std::chrono::milliseconds(10));
+    }
+    if (pRequest->State() != EHttpState::DONE)
+    {
+        dbg_msg("client", "Failed to download update logs");
+        return;
+    }
+
+    unsigned char *pData = nullptr;
+    size_t DataSize = 0;
+    pRequest->Result(&pData, &DataSize);
+    if (!pData || DataSize == 0)
+    {
+        dbg_msg("client", "Empty update logs response");
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_UpdateLogMutex);
+        str_copy(m_aUpdateLogsRaw, reinterpret_cast<const char*>(pData), sizeof(m_aUpdateLogsRaw));
+    }
+    dbg_msg("client", "Raw update logs: \"%s\"", m_aUpdateLogsRaw);
+
+    const char *szEndMarker = "** ";
+    size_t endMarkerLen = str_length(szEndMarker);
+    const char *pCur = m_aUpdateLogsRaw;
+    while (*pCur)
+    {
+        if (str_comp_num(pCur, "// v", 4) == 0)
+        {
+            SUpdateLog Log;
+            pCur += 4;
+            int i = 0;
+            while (i < 31 && *pCur && *pCur != '\n')
+            {
+                Log.m_aVersion[i] = *pCur;
+                i++;
+                pCur++;
+            }
+            Log.m_aVersion[i] = '\0';
+            bool dummyBold, dummyHeader;
+            ProcessLine(Log.m_aVersion, dummyBold, dummyHeader);
+            int verLen = (int)strlen(Log.m_aVersion);
+            if (verLen > 0 && Log.m_aVersion[verLen - 2] == '\\')
+            {
+                Log.m_aVersion[verLen - 2] = '\0';
+            }
+            while (*pCur && *pCur != '\n')
+                pCur++;
+            if (*pCur)
+                pCur++;
+            const char *pEnd = str_find(pCur, szEndMarker);
+            if (!pEnd)
+            {
+                dbg_msg("client", "End marker not found for version %s; using EOF", Log.m_aVersion);
+                pEnd = m_aUpdateLogsRaw + str_length(m_aUpdateLogsRaw);
+            }
+            int contentSize = static_cast<int>(pEnd - pCur);
+            char *pContentBuffer = (char *)malloc(contentSize + 1);
+            str_copy(pContentBuffer, pCur, contentSize + 1);
+            ParseFormattedLines(pContentBuffer, Log.m_vLines);
+            free(pContentBuffer);
+            Log.m_sCombinedContent.clear();
+            for (const auto &line : Log.m_vLines)
+            {
+                Log.m_sCombinedContent += line.m_aText;
+                Log.m_sCombinedContent += "\n";
+            }
+            pCur = pEnd + endMarkerLen;
+            {
+                std::lock_guard<std::mutex> lock(m_UpdateLogMutex);
+                m_TabContents.m_vUpdateLogs.push_back(Log);
+            }
+        }
+        else
+        {
+            pCur++;
+        }
+    }
+
+    std::sort(m_TabContents.m_vUpdateLogs.begin(), m_TabContents.m_vUpdateLogs.end(),
+              [](const SUpdateLog &a, const SUpdateLog &b) {
+                  int majorA = 0, minorA = 0, patchA = 0;
+                  int majorB = 0, minorB = 0, patchB = 0;
+                  ParseVersion(a.m_aVersion, majorA, minorA, patchA);
+                  ParseVersion(b.m_aVersion, majorB, minorB, patchB);
+                  if (majorA != majorB)
+                      return majorA > majorB;
+                  if (minorA != minorB)
+                      return minorA > minorB;
+                  return patchA > patchB;
+              });
+}
 
 void CClient::EnterGame(int Conn)
 {
@@ -3123,6 +3364,10 @@ void CClient::Run()
 	{
 		GenerateTimeoutSeed();
 	}
+
+    std::thread([this]() {
+        ParseUpdateLogs();
+    }).detach();
 
 	unsigned int Seed;
 	secure_random_fill(&Seed, sizeof(Seed));

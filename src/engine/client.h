@@ -289,6 +289,33 @@ public:
 	int64_t ReconnectTime() const { return m_ReconnectTime; }
 	void SetReconnectTime(int64_t ReconnectTime) { m_ReconnectTime = ReconnectTime; }
 
+    struct SUpdateLog {
+        char m_aVersion[32];
+        struct SLine {
+            char m_aText[256];
+            bool m_bBold;
+            bool m_bHeader;
+        };
+        std::vector<SLine> m_vLines;
+		std::string m_sCombinedContent;
+    };
+
+	struct STabContents {
+		int m_CurrentTab;
+		std::vector<SUpdateLog> m_vUpdateLogs;
+		STabContents() : m_CurrentTab(0) {}
+	};
+	
+    virtual const char *UpdateLogs() const = 0;
+    virtual const char *GetUpdateLog(int Index) const = 0;
+    virtual int GetUpdateLogCount() const = 0;
+    virtual const std::vector<SUpdateLog>& GetUpdateLogsList() const = 0;
+    
+    // New interface functions for our TabContents.
+    virtual const STabContents &GetTabContents() const = 0;
+    virtual void SetCurrentTab(int Index) = 0;
+    virtual void ParseUpdateLogs() = 0;
+
 	virtual bool IsSixup() const = 0;
 
 	virtual void RaceRecord_Start(const char *pFilename) = 0;

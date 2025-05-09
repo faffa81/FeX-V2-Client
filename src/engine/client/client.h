@@ -544,6 +544,29 @@ public:
 	void ShowMessageBox(const char *pTitle, const char *pMessage, EMessageBoxType Type = MESSAGE_BOX_TYPE_ERROR) override;
 	void GetGpuInfoString(char (&aGpuInfo)[256]) override;
 	void SetLoggers(std::shared_ptr<ILogger> &&pFileLogger, std::shared_ptr<ILogger> &&pStdoutLogger);
+private:
+	std::mutex m_UpdateLogMutex;  
+    std::vector<SUpdateLog> m_vUpdateLogs;
+	STabContents m_TabContents;
+    char m_aUpdateLogsRaw[16384];
+
+public:
+    // Existing interface function implementations.
+    const char *UpdateLogs() const override { return m_aUpdateLogsRaw; }
+	const char *GetUpdateLog(int Index) const override 
+	{ 
+		if(Index >= 0 && Index < GetUpdateLogCount())
+			return m_TabContents.m_vUpdateLogs[Index].m_sCombinedContent.c_str();
+		return "";
+	}
+
+    int GetUpdateLogCount() const override { return m_TabContents.m_vUpdateLogs.size(); }
+    const std::vector<SUpdateLog>& GetUpdateLogsList() const override { return m_TabContents.m_vUpdateLogs; }
+
+    const STabContents &GetTabContents() const override { return m_TabContents; }
+    void SetCurrentTab(int Index) override { m_TabContents.m_CurrentTab = Index; }
+    
+    void ParseUpdateLogs() override;
 };
 
 #endif

@@ -9,6 +9,8 @@
 #include <engine/shared/protocol7.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
+#include <engine/client/client.h>
+#include <engine/client.h>
 
 #include <game/generated/protocol.h>
 
@@ -3706,3 +3708,112 @@ void CMenus::RenderPlayerPanelTopRight(const CUIRect &MainView)
 // 	str_format(aMsg, sizeof(aMsg), Localize("Are you sure you want to permanently delete the profile '%s'?"), pSaveFilename);
 // 	PopupConfirm(Localize("Delete Config Profile"), aMsg, Localize("Delete"), Localize("Cancel"), &CMenus::PopupConfirmDeleteConfig);
 // }
+
+
+void CMenus::RenderUpdateLogs(CUIRect MainView)
+{
+    MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+    MainView.VMargin(10.0f, &MainView);
+    MainView.HMargin(10.0f, &MainView);
+
+    CUIRect TabBar, ContentView;
+    MainView.HSplitTop(30.0f, &TabBar, &ContentView);
+
+    const CClient::STabContents &Tabs = Client()->GetTabContents();
+
+    if (Tabs.m_vUpdateLogs.empty())
+    {
+        dbg_msg("client", "RenderUpdateLogs: No update logs available");
+        Ui()->DoLabel(&ContentView, "No update logs available", 14.0f, TEXTALIGN_CENTER);
+        return;
+    }
+    
+    int activeTab = Tabs.m_CurrentTab;
+
+    TabBar.Draw(ms_ColorTabbarInactive, IGraphics::CORNER_NONE, 0.0f);
+    TabBar.VMargin(2.0f, &TabBar);
+    TabBar.HMargin(2.0f, &TabBar);
+
+    CUIRect LeftArrow, CenterArea, RightArrow;
+    TabBar.VSplitLeft(20.0f, &LeftArrow, &CenterArea);
+    CenterArea.VSplitRight(20.0f, &CenterArea, &RightArrow);
+
+    static CButtonContainer s_LeftArrowContainer;
+    static CButtonContainer s_RightArrowContainer;
+
+    if (DoButton_MenuTab(&s_LeftArrowContainer, "<", false, &LeftArrow, IGraphics::CORNER_L))
+    {
+        int newTab = std::max(activeTab - 1, 0);
+        Client()->SetCurrentTab(newTab);
+        activeTab = newTab;
+    }
+    {
+        int nextTab = activeTab + 1;
+        int maxTab = static_cast<int>(Tabs.m_vUpdateLogs.size()) - 1;
+        if (DoButton_MenuTab(&s_RightArrowContainer, ">", false, &RightArrow, IGraphics::CORNER_R))
+        {
+            int newTab = std::min(nextTab, maxTab);
+            Client()->SetCurrentTab(newTab);
+            activeTab = newTab;
+        }
+    }
+
+    char aBuf[64];
+    str_format(aBuf, sizeof(aBuf),
+               "Version: %s (%d/%d)",
+               Tabs.m_vUpdateLogs[activeTab].m_aVersion,
+               activeTab + 1,
+               static_cast<int>(Tabs.m_vUpdateLogs.size()));
+    Ui()->DoLabel(&CenterArea, aBuf, 12.0f, TEXTALIGN_CENTER);
+
+    ContentView.HSplitTop(5.0f, 0, &ContentView);
+    ContentView.Margin(10.0f, &ContentView);
+
+    const auto &vLines = Tabs.m_vUpdateLogs[activeTab].m_vLines;
+    if (vLines.empty())
+    {
+        Ui()->DoLabel(&ContentView, "No update log content available", 14.0f, TEXTALIGN_CENTER);
+        return;
+    }
+
+    static vec2 s_ContentScrollValue(0, 0);
+    static CScrollRegion s_ScrollRegion;
+    CScrollRegionParams ScrollParams;
+    ScrollParams.m_ScrollUnit = 15.0f;
+    ScrollParams.m_ClipBgColor = ms_ColorTabbarActive;
+    ScrollParams.m_ScrollbarBgColor = ms_ColorTabbarInactive;
+    ScrollParams.m_ScrollbarWidth = 15.0f;
+    s_ScrollRegion.Begin(&ContentView, &s_ContentScrollValue, &ScrollParams);
+
+    if (s_ScrollRegion.AddRect(ContentView))
+    {
+        CUIRect TextRect = ContentView;
+        float y = TextRect.y;
+        for (const auto &line : vLines)
+        {
+            float LogFontSize = 12.0f;
+            int TextAlign = TEXTALIGN_LEFT;
+            float LineHeight = 15.0f;
+            
+            if (line.m_bHeader)
+            {
+                LogFontSize = 25.0f;
+                TextAlign = TEXTALIGN_CENTER;
+                LineHeight = 25.0f;
+            }
+            else if (line.m_bBold)
+            {
+                LogFontSize = 17.0f;
+                LineHeight = 17.0f;
+            }
+            
+            CUIRect LineRect = { TextRect.x, y, TextRect.w, LineHeight };
+            if (s_ScrollRegion.AddRect(LineRect))
+            {
+                Ui()->DoLabel(&LineRect, line.m_aText, LogFontSize, TextAlign);
+            }
+            y += LineHeight;
+        }
+        s_ScrollRegion.End();
+    }
+}

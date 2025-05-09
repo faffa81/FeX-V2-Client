@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_FEX_UPDATER_H
 
 #include <game/client/component.h>
+#include <engine/shared/console.h>
 #include <engine/shared/http.h>
 #include <engine/storage.h>
 #include <deque>
@@ -44,7 +45,6 @@
         #define PLAT_NAME "unknown"
     #endif
 #endif
-
 
 
 // Updater states modeled after DDNet’s updater.

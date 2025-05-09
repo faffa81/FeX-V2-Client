@@ -465,6 +465,7 @@ protected:
 
 
 	// found in menus.cpp
+	float m_ScrollValue = 0.0f;
 	void Render();
 	void RenderPopupFullscreen(CUIRect Screen);
 	void RenderPopupConnecting(CUIRect Screen);
@@ -742,6 +743,7 @@ public:
 		PAGE_SETTINGS,
 		PAGE_NETWORK,
 		PAGE_GHOST,
+		PAGE_UPDATES,
 
 		PAGE_LENGTH,
 
@@ -910,6 +912,7 @@ public:
 
 	void RenderBar(CUIRect MainView);
 	void RenderPlayerPanelTopRight(const CUIRect &MainView);
+	void RenderUpdateLogs(CUIRect MainView);
 	// static int FindOldNumCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
 	// int FindNextAvailableOldNumber(bool IsFexConfig);
 	// void BackupActiveConfigOnJoin(bool IsFexConfig);

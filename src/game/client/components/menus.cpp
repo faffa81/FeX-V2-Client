@@ -1284,9 +1284,9 @@ void CMenus::Render()
 			{
 				RenderSettings(MainView);
 			}
-			else
+			else if(m_MenuPage == PAGE_UPDATES)
 			{
-				dbg_assert(false, "m_MenuPage invalid");
+				RenderUpdateLogs(MainView);
 			}
 
 			RenderMenubar(TabBar, ClientState);
