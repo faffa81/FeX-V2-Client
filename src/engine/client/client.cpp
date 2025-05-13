@@ -669,7 +669,6 @@ void CClient::ParseUpdateLogs()
         std::lock_guard<std::mutex> lock(m_UpdateLogMutex);
         str_copy(m_aUpdateLogsRaw, reinterpret_cast<const char*>(pData), sizeof(m_aUpdateLogsRaw));
     }
-    dbg_msg("client", "Raw update logs: \"%s\"", m_aUpdateLogsRaw);
 
     const char *szEndMarker = "** ";
     size_t endMarkerLen = str_length(szEndMarker);

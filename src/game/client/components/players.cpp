@@ -10,10 +10,6 @@
 #include <game/generated/client_data7.h>
 #include <game/generated/protocol.h>
 
-// fex
-#include <game/client/projectile_data.h>
-#include <game/client/laser_data.h>
-
 #include <game/mapitems.h>
 
 #include <game/client/animstate.h>
@@ -818,6 +814,20 @@ void CPlayers::RenderPlayer(
 
 		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
 		Graphics()->QuadsSetRotation(0);
+	}
+
+	if(g_Config.m_ClShowOthersInMenu)
+	{
+		if((Player.m_PlayerFlags & PLAYERFLAG_IN_MENU) && !m_pClient->m_aClients[ClientId].m_Afk)
+		{
+			Graphics()->TextureSet(g_pData->m_aImages[IMAGE_SETTINGS_ICON].m_Id);
+
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+			Graphics()->RenderQuadContainerAsSprite(m_WeaponEmoteQuadContainerIndex, 0, Position.x + 24.f, Position.y - 37.25f, 0.85f, 1.125f);
+
+			Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+			Graphics()->QuadsSetRotation(0);
+		}
 	}
 
 	if(g_Config.m_ClShowEmotes && !m_pClient->m_aClients[ClientId].m_EmoticonIgnore && m_pClient->m_aClients[ClientId].m_EmoticonStartTick != -1)

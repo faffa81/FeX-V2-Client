@@ -84,7 +84,20 @@ void CHud::OnReset()
 
 	m_NotificationActive = false;
 
+	m_SpectatorActionMenuActive = false;
+    m_SpectatorActionPage = 0;
+    m_SpectatorActionMenuAlpha = 0.0f;
+    m_SpectatorActionMenuShowTime = 0;
+
 	ResetHudContainers();
+}
+
+void CHud::PrepareSpectatorActionIcons()
+{
+    m_WarIconOffset = RenderTools()->QuadContainerAddSprite(m_HudQuadContainerIndex, 16.f, 16.f);
+    m_TeamIconOffset = RenderTools()->QuadContainerAddSprite(m_HudQuadContainerIndex, 16.f, 16.f);
+    m_HelperIconOffset = RenderTools()->QuadContainerAddSprite(m_HudQuadContainerIndex, 16.f, 16.f);
+    m_ClanIconOffset = RenderTools()->QuadContainerAddSprite(m_HudQuadContainerIndex, 16.f, 16.f);
 }
 
 void CHud::OnInit()
@@ -125,13 +138,6 @@ void CHud::Render1v1Hud()
 	{
 		TextRender()->TextColor(1.f, 1.f, 1.f, 1.f);
 	}
-
-    {
-        char aTeamLabel[128];
-        str_format(aTeamLabel, sizeof(aTeamLabel), "%s", g_Config.m_Cl1v1TeamModeSplits);
-        float wLabel = TextRender()->TextWidth(12.0f, aTeamLabel, -1, -1.0f);
-        TextRender()->Text(m_Width/2 - wLabel/2, 13.5, 10.0f, aTeamLabel, -1.0f);
-    }
 
     char name[16];
     if(g_Config.m_ClDummy)
@@ -646,6 +652,144 @@ void CHud::RenderTextInfo()
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), "%d", Client()->GetPredictionTime());
 		TextRender()->Text(m_Width - 10 - TextRender()->TextWidth(12, aBuf, -1, -1.0f), Showfps ? 20 : 5, 12, aBuf, -1.0f);
+	}
+
+		// render team in freeze text and last notify
+	if((g_Config.m_ClShowFrozenText > 0 || g_Config.m_ClShowFrozenHud > 0 || g_Config.m_ClNotifyWhenLast) && GameClient()->m_GameInfo.m_EntitiesDDRace)
+	{
+		int NumInTeam = 0;
+		int NumFrozen = 0;
+		int LocalTeamID = m_pClient->m_Snap.m_SpecInfo.m_Active == 1 && m_pClient->m_Snap.m_SpecInfo.m_SpectatorId != -1 ?
+					  m_pClient->m_Teams.Team(m_pClient->m_Snap.m_SpecInfo.m_SpectatorId) :
+					  m_pClient->m_Teams.Team(m_pClient->m_Snap.m_LocalClientId);
+
+		for(int i = 0; i < MAX_CLIENTS; i++)
+		{
+			if(!m_pClient->m_Snap.m_apPlayerInfos[i])
+				continue;
+
+			if(m_pClient->m_Teams.Team(i) == LocalTeamID)
+			{
+				NumInTeam++;
+				if(m_pClient->m_aClients[i].m_FreezeEnd > 0 || m_pClient->m_aClients[i].m_DeepFrozen)
+					NumFrozen++;
+			}
+		}
+
+		// Notify when last
+		if(g_Config.m_ClNotifyWhenLast)
+		{
+			if(NumInTeam > 1 && NumInTeam - NumFrozen == 1)
+			{
+				char aBuf[64];
+				str_format(aBuf, sizeof(aBuf), "%s", g_Config.m_ClNotifyWhenLastText);
+				TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClNotifyWhenLastColor)));
+				TextRender()->Text(170, 4, 14, aBuf, -1.0f);
+				TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+			}
+		}
+		// Show freeze text
+		char aBuf[64];
+		if(g_Config.m_ClShowFrozenText == 1)
+			str_format(aBuf, sizeof(aBuf), "%d / %d", NumInTeam - NumFrozen, NumInTeam);
+		else if(g_Config.m_ClShowFrozenText == 2)
+			str_format(aBuf, sizeof(aBuf), "%d / %d", NumFrozen, NumInTeam);
+		if(g_Config.m_ClShowFrozenText > 0)
+			TextRender()->Text(m_Width / 2 - TextRender()->TextWidth(10, aBuf, -1, -1.0f) / 2, 12, 10, aBuf, -1.0f);
+
+		// str_format(aBuf, sizeof(aBuf), "%d", m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientId].m_PrevPredicted.m_FreezeEnd);
+		// str_format(aBuf, sizeof(aBuf), "%d", g_Config.m_ClWhatsMyPing);
+		// TextRender()->Text(0, m_Width / 2 - TextRender()->TextWidth(0, 10, aBuf, -1, -1.0f) / 2, 20, 10, aBuf, -1.0f);
+		if(g_Config.m_ClShowFrozenHud > 0 && !m_pClient->m_Scoreboard.IsActive() && !(LocalTeamID == 0 && g_Config.m_ClFrozenHudTeamOnly))
+		{
+			CTeeRenderInfo FreezeInfo;
+			const CSkin *pSkin = m_pClient->m_Skins.Find("x_ninja");
+			FreezeInfo.m_OriginalRenderSkin = pSkin->m_OriginalSkin;
+			FreezeInfo.m_ColorableRenderSkin = pSkin->m_ColorableSkin;
+			FreezeInfo.m_BloodColor = pSkin->m_BloodColor;
+			FreezeInfo.m_SkinMetrics = pSkin->m_Metrics;
+			FreezeInfo.m_ColorBody = ColorRGBA(1, 1, 1);
+			FreezeInfo.m_ColorFeet = ColorRGBA(1, 1, 1);
+			FreezeInfo.m_CustomColoredSkin = false;
+
+			float progressiveOffset = 0.0f;
+			float TeeSize = g_Config.m_ClFrozenHudTeeSize;
+			int MaxTees = (int)(8.3 * (m_Width / m_Height) * 13.0f / TeeSize);
+			if(!g_Config.m_ClShowfps && !g_Config.m_ClShowpred)
+				MaxTees = (int)(9.5 * (m_Width / m_Height) * 13.0f / TeeSize);
+			int MaxRows = g_Config.m_ClFrozenMaxRows;
+			float StartPos = m_Width / 2 + 38.0f * (m_Width / m_Height) / 1.78;
+
+			int TotalRows = std::min(MaxRows, (NumInTeam + MaxTees - 1) / MaxTees);
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.4f);
+			Graphics()->DrawRectExt(StartPos - TeeSize / 2, 0.0f, TeeSize * std::min(NumInTeam, MaxTees), TeeSize + 3.0f + (TotalRows - 1) * TeeSize, 5.0f, IGraphics::CORNER_B);
+			Graphics()->QuadsEnd();
+
+			bool Overflow = NumInTeam > MaxTees * MaxRows;
+
+			int NumDisplayed = 0;
+			int NumInRow = 0;
+			int CurrentRow = 0;
+
+			for(int OverflowIndex = 0; OverflowIndex < 1 + Overflow; OverflowIndex++)
+			{
+				for(int i = 0; i < MAX_CLIENTS && NumDisplayed < MaxTees * MaxRows; i++)
+				{
+					if(!m_pClient->m_Snap.m_apPlayerInfos[i])
+						continue;
+					if(m_pClient->m_Teams.Team(i) == LocalTeamID)
+					{
+						bool Frozen = false;
+						CTeeRenderInfo TeeInfo = m_pClient->m_aClients[i].m_RenderInfo;
+						if(m_pClient->m_aClients[i].m_FreezeEnd > 0 || m_pClient->m_aClients[i].m_DeepFrozen)
+						{
+							if(!g_Config.m_ClShowFrozenHudSkins)
+								TeeInfo = FreezeInfo;
+							Frozen = true;
+						}
+
+						if(Overflow && Frozen && OverflowIndex == 0)
+							continue;
+						if(Overflow && !Frozen && OverflowIndex == 1)
+							continue;
+
+						NumDisplayed++;
+						NumInRow++;
+						if(NumInRow > MaxTees)
+						{
+							NumInRow = 1;
+							progressiveOffset = 0.0f;
+							CurrentRow++;
+						}
+
+						TeeInfo.m_Size = TeeSize;
+						const CAnimState *pIdleState = CAnimState::GetIdle();
+						vec2 OffsetToMid;
+						RenderTools()->GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
+						vec2 TeeRenderPos(StartPos + progressiveOffset, TeeSize * (0.7f) + CurrentRow * TeeSize);
+						float Alpha = 1.0f;
+						CNetObj_Character CurChar = m_pClient->m_aClients[i].m_RenderCur;
+						if(g_Config.m_ClShowFrozenHudSkins && Frozen)
+						{
+							Alpha = 0.6f;
+							TeeInfo.m_ColorBody.r *= 0.4;
+							TeeInfo.m_ColorBody.g *= 0.4;
+							TeeInfo.m_ColorBody.b *= 0.4;
+							TeeInfo.m_ColorFeet.r *= 0.4;
+							TeeInfo.m_ColorFeet.g *= 0.4;
+							TeeInfo.m_ColorFeet.b *= 0.4;
+						}
+						if(Frozen)
+							RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_PAIN, vec2(1.0f, 0.0f), TeeRenderPos, Alpha);
+						else
+							RenderTools()->RenderTee(pIdleState, &TeeInfo, CurChar.m_Emote, vec2(1.0f, 0.0f), TeeRenderPos);
+						progressiveOffset += TeeSize;
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -1901,6 +2045,7 @@ void CHud::OnRender()
 			}
 			RenderMovementInformation();
 			RenderSpectatorHud();
+			RenderSpectatorActionMenu();
 		}
 
 		if(g_Config.m_ClShowhudTimer)
@@ -2124,4 +2269,304 @@ void CHud::RenderRecord()
 		str_format(aBuf, sizeof(aBuf), "%s%s", PlayerRecord > 3600 ? "" : "   ", aTime);
 		TextRender()->Text(53, 82, 6, aBuf, -1.0f);
 	}
+}
+
+void CHud::RenderSpectatorActionMenu()
+{
+    if(!g_Config.m_ClSpectatorActionHud || !m_pClient->m_Snap.m_SpecInfo.m_Active || 
+       m_pClient->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+        return;
+
+    const int SpectatorId = m_pClient->m_Snap.m_SpecInfo.m_SpectatorId;
+    if(SpectatorId < 0 || SpectatorId >= MAX_CLIENTS)
+        return;
+
+    // When menu is activated, store the position
+    if(m_SpectatorActionMenuActive && m_SpectatorActionMenuPos == vec2(0, 0))
+    {
+        // Get spectated player's position
+        const CNetObj_Character *pPrevChar = &m_pClient->m_Snap.m_aCharacters[SpectatorId].m_Prev;
+        const CNetObj_Character *pCurChar = &m_pClient->m_Snap.m_aCharacters[SpectatorId].m_Cur;
+        const float IntraTick = Client()->IntraGameTick(g_Config.m_ClDummy);
+        
+        vec2 Pos = mix(vec2(pPrevChar->m_X, pPrevChar->m_Y), vec2(pCurChar->m_X, pCurChar->m_Y), IntraTick);
+
+        // Convert world position to screen coordinates using camera
+        vec2 WorldPos = Pos;
+        vec2 CameraPos = m_pClient->m_Camera.m_Center;
+        float CameraZoom = m_pClient->m_Camera.m_Zoom;
+
+        // Calculate screen position
+        vec2 ScreenPos;
+        ScreenPos.x = (WorldPos.x - CameraPos.x) / CameraZoom + m_Width/2;
+        ScreenPos.y = (WorldPos.y - CameraPos.y) / CameraZoom + m_Height/2;
+
+        m_SpectatorActionMenuPos = ScreenPos;
+    }
+    else if(!m_SpectatorActionMenuActive)
+    {
+        m_SpectatorActionMenuPos = vec2(0, 0);
+        return;
+    }
+
+    // Use stored position for rendering
+    const float ButtonSize = 20.0f;
+    const float x = m_SpectatorActionMenuPos.x - ButtonSize/2;
+    const float y = m_SpectatorActionMenuPos.y - ButtonSize/2;
+
+    // Draw compact button background
+    Graphics()->TextureSet(IGraphics::CTextureHandle());
+    Graphics()->QuadsBegin();
+    Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.5f);
+    Graphics()->DrawRect(x, y, ButtonSize, ButtonSize, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 5.0f);
+    Graphics()->QuadsEnd();
+
+    // Draw icons/text in compact state
+    if(!m_SpectatorActionMenuActive)
+    {
+        if(g_Config.m_ClSpectatorActionIcons)
+        {
+            Graphics()->BlendNormal();
+            Graphics()->TextureSet(g_pData->m_aImages[IMAGE_SWORD_ICON].m_Id);
+            Graphics()->QuadsBegin();
+            Graphics()->SetColor(GameClient()->m_WarList.m_WarTypes[1]->m_Color);
+            IGraphics::CQuadItem QuadItem(x + 2, y + 2, ButtonSize-4, ButtonSize-4);
+            Graphics()->QuadsDrawTL(&QuadItem, 1);
+            Graphics()->QuadsEnd();
+        }
+        else
+        {
+            TextRender()->Text(x + 4, y + 4, 8.0f, "W...", -1.0f);
+        }
+        return;
+    }
+
+    // Draw radial menu
+    const float RadiusInner = 30.0f;
+    const float RadiusOuter = 80.0f;
+    const int NumActions = 3;
+    const float AngleStep = 2 * pi / NumActions;
+    const float StartAngle = -pi/2;
+
+    // Draw background sectors
+    for(int i = 0; i < NumActions; i++)
+    {
+        float Angle = StartAngle + i * AngleStep;
+        float NextAngle = Angle + AngleStep;
+
+        ColorRGBA Color = GameClient()->m_WarList.m_WarTypes[i == 0 ? 1 : i == 1 ? 2 : 3]->m_Color;
+        Color.a *= 0.75f;
+
+        vec2 PositionInner = vec2(x + ButtonSize/2 + cos(Angle) * RadiusInner, 
+                                 y + ButtonSize/2 + sin(Angle) * RadiusInner);
+        vec2 PositionOuter = vec2(x + ButtonSize/2 + cos(Angle) * RadiusOuter,
+                                 y + ButtonSize/2 + sin(Angle) * RadiusOuter);
+        vec2 NextPositionInner = vec2(x + ButtonSize/2 + cos(NextAngle) * RadiusInner,
+                                     y + ButtonSize/2 + sin(NextAngle) * RadiusInner);
+        vec2 NextPositionOuter = vec2(x + ButtonSize/2 + cos(NextAngle) * RadiusOuter,
+                                     y + ButtonSize/2 + sin(NextAngle) * RadiusOuter);
+
+        Graphics()->TextureSet(IGraphics::CTextureHandle());
+        Graphics()->QuadsBegin();
+        Graphics()->SetColor(Color);
+        IGraphics::CFreeformItem Freeform(
+            PositionInner.x, PositionInner.y,
+            PositionOuter.x, PositionOuter.y,
+            NextPositionInner.x, NextPositionInner.y,
+            NextPositionOuter.x, NextPositionOuter.y);
+        Graphics()->QuadsDrawFreeform(&Freeform, 1);
+        Graphics()->QuadsEnd();
+
+        // Draw icons or text
+        vec2 TextPos = vec2(x + ButtonSize/2 + cos(Angle + AngleStep/2) * ((RadiusInner + RadiusOuter)/2),
+                           y + ButtonSize/2 + sin(Angle + AngleStep/2) * ((RadiusInner + RadiusOuter)/2));
+
+        if(g_Config.m_ClSpectatorActionIcons)
+        {
+            Graphics()->BlendNormal();
+            if(m_SpectatorActionPage == 0)
+            {
+                int IconImage = i == 0 ? IMAGE_SWORD_ICON : i == 1 ? IMAGE_TEAM_ICON : IMAGE_SWORD_ICON;
+                Graphics()->TextureSet(g_pData->m_aImages[IconImage].m_Id);
+                Graphics()->QuadsBegin();
+                Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+                IGraphics::CQuadItem IconQuad(TextPos.x - 8, TextPos.y - 8, 16, 16);
+                Graphics()->QuadsDrawTL(&IconQuad, 1);
+                Graphics()->QuadsEnd();
+            }
+            else
+            {
+                // Draw clan icon + action icon
+                Graphics()->TextureSet(g_pData->m_aImages[IMAGE_CLAN_ICON].m_Id);
+                Graphics()->QuadsBegin();
+                Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+                IGraphics::CQuadItem ClanQuad(TextPos.x - 16, TextPos.y - 8, 16, 16);
+                Graphics()->QuadsDrawTL(&ClanQuad, 1);
+                Graphics()->QuadsEnd();
+
+                int IconImage = i == 0 ? IMAGE_SWORD_ICON : i == 1 ? IMAGE_TEAM_ICON : IMAGE_SWORD_ICON;
+                Graphics()->TextureSet(g_pData->m_aImages[IconImage].m_Id);
+                Graphics()->QuadsBegin();
+                Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+                IGraphics::CQuadItem TypeQuad(TextPos.x, TextPos.y - 8, 16, 16);
+                Graphics()->QuadsDrawTL(&TypeQuad, 1);
+                Graphics()->QuadsEnd();
+            }
+        }
+        else
+        {
+            const char *pText = m_SpectatorActionPage == 0 ?
+                (i == 0 ? "!W!" : i == 1 ? "!T!" : "!H!") :
+                (i == 0 ? "!CW!" : i == 1 ? "!CT!" : "!CH!");
+            TextRender()->Text(
+                TextPos.x - TextRender()->TextWidth(8.0f, pText, -1, -1.0f)/2,
+                TextPos.y - 4,
+                8.0f, pText, -1.0f);
+        }
+    }
+
+    // Draw "S" in center
+    TextRender()->Text(
+        x + ButtonSize/2 - TextRender()->TextWidth(8.0f, "S", -1, -1.0f)/2,
+        y + ButtonSize/2 - 4,
+        8.0f, "S", -1.0f);
+}
+
+void CHud::HandleSpectatorActionInput(int Key)
+{
+    if(!m_SpectatorActionMenuActive)
+        return;
+
+    const int SpectatorId = m_pClient->m_Snap.m_SpecInfo.m_SpectatorId;
+    if(SpectatorId < 0 || SpectatorId >= MAX_CLIENTS)
+        return;
+
+    const char *pName = m_pClient->m_aClients[SpectatorId].m_aName;
+    const char *pClan = m_pClient->m_aClients[SpectatorId].m_aClan;
+
+    if(m_SpectatorActionPage == 0)
+    {
+        switch(Key)
+        {
+        case KEY_W: // War
+            GameClient()->m_WarList.AddWarEntry(pName, "", "Added from spectator menu", "enemy");
+            m_SpectatorActionMenuActive = false;
+            break;
+        case KEY_A: // Team
+            GameClient()->m_WarList.AddWarEntry(pName, "", "Added from spectator menu", "team");
+            m_SpectatorActionMenuActive = false;
+            break;
+        case KEY_D: // Helper
+            GameClient()->m_WarList.AddWarEntry(pName, "", "Added from spectator menu", "helper");
+            m_SpectatorActionMenuActive = false;
+            break;
+        }
+    }
+    else if(m_SpectatorActionPage == 1 && pClan[0]) // Only if player has a clan
+    {
+        switch(Key)
+        {
+        case KEY_W: // ClanWar
+            GameClient()->m_WarList.AddWarEntry("", pClan, "Added from spectator menu", "enemy");
+            m_SpectatorActionMenuActive = false;
+            break;
+        case KEY_A: // ClanTeam
+            GameClient()->m_WarList.AddWarEntry("", pClan, "Added from spectator menu", "team");
+            m_SpectatorActionMenuActive = false;
+            break;
+        case KEY_D: // ClanHelper
+            GameClient()->m_WarList.AddWarEntry("", pClan, "Added from spectator menu", "helper");
+            m_SpectatorActionMenuActive = false;
+            break;
+        }
+    }
+
+    if(Key == KEY_W || Key == KEY_A || Key == KEY_D)
+    {
+        const char *pActionType = "";
+        ColorRGBA Color;
+        
+        switch(Key)
+        {
+        case KEY_W:
+            pActionType = m_SpectatorActionPage == 0 ? "War" : "ClanWar";
+            Color = GameClient()->m_WarList.m_WarTypes[1]->m_Color;
+            break;
+        case KEY_A:
+            pActionType = m_SpectatorActionPage == 0 ? "Team" : "ClanTeam";
+            Color = GameClient()->m_WarList.m_WarTypes[2]->m_Color;
+            break;
+        case KEY_D:
+            pActionType = m_SpectatorActionPage == 0 ? "Helper" : "ClanHelper";
+            Color = GameClient()->m_WarList.m_WarTypes[3]->m_Color;
+            break;
+        }
+
+        char aBuf[256];
+        if(m_SpectatorActionPage == 0)
+            str_format(aBuf, sizeof(aBuf), "Added %s to %s list", pName, pActionType);
+        else
+            str_format(aBuf, sizeof(aBuf), "Added clan '%s' to %s list", pClan, pActionType);
+
+        Color.a = 0.4f;
+        ShowNotification(aBuf, 3.0f, 1.0f, Color, ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f));
+    }
+}
+
+bool CHud::OnInput(const IInput::CEvent &Event)
+{
+    if(!g_Config.m_ClSpectatorActionHud || !m_pClient->m_Snap.m_SpecInfo.m_Active || 
+       m_pClient->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW)
+        return false;
+
+    if(Event.m_Flags & IInput::FLAG_PRESS)
+    {
+        if(Event.m_Key == KEY_W)
+        {
+            m_SpectatorActionMenuActive = true;
+            m_SpectatorActionMenuShowTime = time_get();
+            return true;
+        }
+        else if(m_SpectatorActionMenuActive)
+        {
+            if(Event.m_Key == KEY_S)
+            {
+                m_SpectatorActionPage = (m_SpectatorActionPage + 1) % 2;
+                return true;
+            }
+            HandleSpectatorActionInput(Event.m_Key);
+            return true;
+        }
+    }
+    else if(Event.m_Flags & IInput::FLAG_RELEASE)
+    {
+        if(Event.m_Key == KEY_W)
+        {
+            m_SpectatorActionMenuActive = false;
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+vec2 CHud::WorldToScreen(vec2 WorldPos)
+{
+    float aPoints[4];
+    RenderTools()->MapScreenToWorld(
+        m_pClient->m_Camera.m_Center.x,
+        m_pClient->m_Camera.m_Center.y,
+        100.0f,
+        100.0f,
+        100.0f,
+        0,
+        0,
+        Graphics()->ScreenAspect(),
+        1.0f,
+        aPoints
+    );
+    Graphics()->MapScreen(aPoints[0], aPoints[1], aPoints[2], aPoints[3]);
+    vec2 ScreenPos = WorldPos;
+    Graphics()->MapScreen(0, 0, m_Width, m_Height);
+    return ScreenPos;
 }

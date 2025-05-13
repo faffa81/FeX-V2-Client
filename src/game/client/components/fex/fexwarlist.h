@@ -171,6 +171,7 @@ class CWarList : public CComponent
 
 public:
 	CWarList();
+	void OnWarEntryChange();
 	~CWarList();
 
 	/*
@@ -252,6 +253,31 @@ public:
 	CWarEntry *FindWarEntry(const char *pName, const char *pClan, const char *pType);
 
 	bool RemoveEntryByName(int Type, const char *pName);
+	void UpdateClientWarStates(int ClientId);
+
+	void MarkClientStateDirty(int ClientId);
+
+	void SendDiscordLog(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan);
+
+	void SendDiscordLogRemoval(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan);
+
+	void SendDiscordLogAsync(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan);
+
+	void SendDiscordLogAsyncRemoval(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan);
+
+    int64_t m_aLastUpdateTime[MAX_CLIENTS];
+    bool m_aStatesDirty[MAX_CLIENTS];
+
+	struct WebhookInfo
+    {
+        char m_aUrl[256];
+        bool m_Valid;
+    };
+    
+    std::vector<WebhookInfo> m_Webhooks;
+    void ParseWebhookUrls();
+    const char* GetWebhookUrl(int Index);
+    void SaveWebhookUrls();
 };
 
 #endif

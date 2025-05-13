@@ -110,11 +110,12 @@ public:
 	void ResetHudContainers();
 	virtual void OnWindowResize() override;
 	virtual void OnReset() override;
+	virtual bool OnInput(const IInput::CEvent &Event) override;
+	vec2 WorldToScreen(vec2 WorldPos);
 	virtual void OnRender() override;
 	virtual void OnInit() override;
 	void Render1v1Hud();
 	virtual void OnNewSnapshot() override;
-
 
 	// DDRace
 
@@ -125,6 +126,7 @@ public:
 
 private:
 	void RenderRecord();
+	void RenderSpectatorQuickActions();
 	void RenderDDRaceEffects();
 	float m_TimeCpDiff;
 	float m_ServerRecord;
@@ -186,6 +188,24 @@ private:
     STextContainerIndex m_NotificationTextContainerIndex;
 
 	int m_lastSoloState;
+
+    bool m_SpectatorActionMenuActive;
+    int m_SpectatorActionPage;
+    float m_SpectatorActionMenuAlpha;
+    int64_t m_SpectatorActionMenuShowTime;
+    
+    void RenderSpectatorActionMenu();
+    bool IsSpectatorActionMenuShown();
+    void HandleSpectatorActionInput(int Key);
+
+    // Icon indices for the action menu
+    int m_WarIconOffset;
+    int m_TeamIconOffset;
+    int m_HelperIconOffset;
+    int m_ClanIconOffset;
+
+    void PrepareSpectatorActionIcons();
+	vec2 m_SpectatorActionMenuPos{0, 0};
 };
 
 #endif

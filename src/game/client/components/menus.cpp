@@ -807,6 +807,7 @@ void CMenus::RenderFadeLoadingScreen()
     int64_t now = time_get();
     float elapsed = (now - m_FadeStateStartTime) / (float)time_freq();
 
+    // Handle fade states
     if(m_FadeState == FADE_IN)
     {
         if(elapsed < 2.0f)
@@ -821,21 +822,13 @@ void CMenus::RenderFadeLoadingScreen()
     else if(m_FadeState == WAIT)
     {
         m_FadeAlpha = 1.0f;
-        if(!g_Config.m_ClFirstLaunch)
+        if(!g_Config.m_ClFirstLaunch || !m_LoadingOptionsActive)
         {
             if(elapsed >= 4.0f)
             {
                 m_FadeState = FADE_OUT;
                 m_FadeStateStartTime = now;
             }
-        }
-        else
-        {
-			if(elapsed >= 15.0f)
-			{
-				m_FadeState = FADE_OUT;
-				m_FadeStateStartTime = now;
-			}
         }
     }
     else if(m_FadeState == FADE_OUT)
@@ -849,44 +842,288 @@ void CMenus::RenderFadeLoadingScreen()
         }
     }
 
-    CUIRect screenRect = *Ui()->Screen();
-    screenRect.Draw(ColorRGBA(0, 0, 0, 1), IGraphics::CORNER_NONE, 0.0f);
+    // Render background
+    CUIRect Screen = *Ui()->Screen();
+    Screen.Draw(ColorRGBA(0, 0, 0, 1), IGraphics::CORNER_NONE, 0.0f);
 
-    CUIRect logoRect;
-    logoRect.w = 300.0f;
-    logoRect.h = 100.0f;
-    logoRect.x = screenRect.x + (screenRect.w - logoRect.w) / 2.0f;
-    logoRect.y = screenRect.y + (screenRect.h - logoRect.h) / 2.0f - 80.0f;
+    // Render logo
+    {
+        CUIRect LogoRect;
+        LogoRect.w = 300.0f;
+        LogoRect.h = 100.0f;
+        LogoRect.x = Screen.x + (Screen.w - LogoRect.w) / 2.0f;
+        LogoRect.y = Screen.y + 40.0f;
 
-    Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
-    Graphics()->QuadsBegin();
-    Graphics()->SetColor(1.0f, 1.0f, 1.0f, m_FadeAlpha);
-    IGraphics::CQuadItem q(logoRect.x, logoRect.y, logoRect.w, logoRect.h);
-    Graphics()->QuadsDrawTL(&q, 1);
-    Graphics()->QuadsEnd();
+        Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
+        Graphics()->QuadsBegin();
+        Graphics()->SetColor(1.0f, 1.0f, 1.0f, m_FadeAlpha);
+        IGraphics::CQuadItem QuadItem(LogoRect.x, LogoRect.y, LogoRect.w, LogoRect.h);
+        Graphics()->QuadsDrawTL(&QuadItem, 1);
+        Graphics()->QuadsEnd();
 
-    CUIRect versionRect;
-    versionRect.x = logoRect.x;
-    versionRect.y = logoRect.y + logoRect.h + 10.0f;
-    versionRect.w = logoRect.w;
-    versionRect.h = 20.0f;
-    char aVersion[128];
-    str_format(aVersion, sizeof(aVersion), "%s", FEX_RELEASE_VERSION);
-    TextRender()->TextColor(1.0f, 1.0f, 1.0f, m_FadeAlpha);
-    Ui()->DoLabel(&versionRect, aVersion, 16.0f, TEXTALIGN_MC);
+        // Version texts under logo
+        CUIRect Version = LogoRect;
+        Version.y += LogoRect.h + 10.0f;
+        Version.h = 20.0f;
+        char aVersion[64];
+        str_format(aVersion, sizeof(aVersion), "FeX: %s", FEX_RELEASE_VERSION);
+        TextRender()->TextColor(1.0f, 1.0f, 1.0f, m_FadeAlpha);
+        Ui()->DoLabel(&Version, aVersion, 16.0f, TEXTALIGN_MC);
+
+        Version.y += 20.0f;
+        str_format(aVersion, sizeof(aVersion), "DDNet: %s", GAME_RELEASE_VERSION);
+        Ui()->DoLabel(&Version, aVersion, 16.0f, TEXTALIGN_MC);
+    }
+
+    if(m_LoadingOptionsActive)
+    {
+        static float s_ReturnHoldTime = 0.0f;
+        const float ReturnHoldDuration = 1.0f;
+
+        if(Input()->KeyIsPressed(KEY_RETURN))
+        {
+            s_ReturnHoldTime += Client()->RenderFrameTime();
+        }
+        else
+        {
+            s_ReturnHoldTime = 0.0f;
+        }
+
+        // Options list
+        CUIRect OptionsRect;
+        OptionsRect.x = Screen.x + 100.0f;
+        OptionsRect.y = Screen.y + 150.0f;
+        OptionsRect.w = Screen.w - 200.0f;
+        OptionsRect.h = 40.0f;
+
+        const float SmallFontSize = 14.0f;
+        const float LargeFontSize = 20.0f;
+        const float OptionSpacing = 45.0f;
+
+		m_vLoadingScreenOptions.clear();
+		
+		// Create vector of font names
+		static std::vector<const char*> s_FontNames;
+		s_FontNames.clear();
+		
+		const auto *pFaces = TextRender()->GetCustomFaces();
+		for(const auto& Face : *pFaces)
+		{
+			s_FontNames.push_back(Face.c_str());
+		}
+		
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Font", g_Config.m_ClCustomFont, 0, s_FontNames.size()-1, false));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Freeze Kill", &g_Config.m_ClFreezeKill, 0, 1, true));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Auto Dummy Join", &g_Config.m_ClAutoJoinDummy, 0, 1, true));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Fast Input", &g_Config.m_ClFastInput, 0, 1, true));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Silent Messages", &g_Config.m_ClSilentMessages, 0, 1, true));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Dismiss AdBots", &g_Config.m_ClDismissAdBots, 0, 3, false));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Visual Mode", &g_Config.m_ClVisual, 0, 1, true));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Menu Frames", &g_Config.m_ClStartMenuFrames, 0, 1, true));
+		m_vLoadingScreenOptions.push_back(SLoadingScreenOption("Menu Theme", &g_Config.m_ClStartMenuTheme, 0, 3, false));
+		
+		m_SelectedOption = 0;
+		m_LoadingOptionsActive = true;
+
+        for(size_t i = 0; i < m_vLoadingScreenOptions.size(); i++)
+        {
+            SLoadingScreenOption &Option = m_vLoadingScreenOptions[i];
+            
+            CUIRect Label = OptionsRect;
+            Label.VSplitLeft(200.0f, &Label, &OptionsRect);
+            
+            // Only render if it's one of the 3 visible options
+            if((int)i >= m_SelectedOption - 1 && (int)i <= m_SelectedOption + 1)
+            {
+                const bool IsSelected = (int)i == m_SelectedOption;
+                const float YOffset = (i - m_SelectedOption) * OptionSpacing;
+                Label.y += YOffset;
+                OptionsRect.y += YOffset;
+
+                // Draw selection highlight
+                if(IsSelected)
+                {
+                    CUIRect HighlightRect = Label;
+                    HighlightRect.w += OptionsRect.w;
+                    HighlightRect.Draw(ColorRGBA(1, 1, 1, 0.25f), IGraphics::CORNER_ALL, 5.0f);
+                }
+
+                // Option name with different sizes
+                Ui()->DoLabel(&Label, Option.m_pName, IsSelected ? LargeFontSize : SmallFontSize, TEXTALIGN_ML);
+
+                // Value display
+                CUIRect ValueLabel = OptionsRect;
+                ValueLabel.VSplitLeft(300.0f, &ValueLabel, nullptr);
+
+                if(str_comp(Option.m_pName, "Font") == 0)
+                {
+                    const auto* pFaces = TextRender()->GetCustomFaces();
+                    int CurrentIdx = 0;
+                    
+                    // Find current font index
+                    for(size_t f = 0; f < pFaces->size(); f++)
+                    {
+                        if(str_comp(g_Config.m_ClCustomFont, pFaces->at(f).c_str()) == 0)
+                        {
+                            CurrentIdx = f;
+                            break;
+                        }
+                    }
+
+                    // Font selection values
+                    if(IsSelected)
+                    {
+                        // Show previous value
+                        const char* pPrevFont = pFaces->at((CurrentIdx - 1 + pFaces->size()) % pFaces->size()).c_str();
+                        Ui()->DoLabel(&ValueLabel, pPrevFont, SmallFontSize, TEXTALIGN_ML);
+                        
+                        // Show current value
+                        ValueLabel.y += OptionSpacing * 0.5f;
+                        const char* pCurrentFont = pFaces->at(CurrentIdx).c_str();
+                        Ui()->DoLabel(&ValueLabel, pCurrentFont, LargeFontSize, TEXTALIGN_ML);
+                        
+                        // Show next value
+                        ValueLabel.y += OptionSpacing * 0.5f;
+                        const char* pNextFont = pFaces->at((CurrentIdx + 1) % pFaces->size()).c_str();
+                        Ui()->DoLabel(&ValueLabel, pNextFont, SmallFontSize, TEXTALIGN_ML);
+                    }
+                    else
+                    {
+                        const char* pCurrentFont = pFaces->at(CurrentIdx).c_str();
+                        Ui()->DoLabel(&ValueLabel, pCurrentFont, SmallFontSize, TEXTALIGN_ML);
+                    }
+                }
+                else
+                {
+                    // Regular option values
+                    char aBuf[64];
+                    if(Option.m_IsCheckbox)
+                    {
+                        if(IsSelected)
+                        {
+                            // Show Off
+                            str_copy(aBuf, "Off");
+                            Ui()->DoLabel(&ValueLabel, aBuf, SmallFontSize, TEXTALIGN_ML);
+                            
+                            // Show current value
+                            ValueLabel.y += OptionSpacing * 0.5f;
+                            str_format(aBuf, sizeof(aBuf), "%s", *Option.m_pConfig ? "On" : "Off");
+                            Ui()->DoLabel(&ValueLabel, aBuf, LargeFontSize, TEXTALIGN_ML);
+                            
+                            // Show On
+                            ValueLabel.y += OptionSpacing * 0.5f;
+                            str_copy(aBuf, "On");
+                            Ui()->DoLabel(&ValueLabel, aBuf, SmallFontSize, TEXTALIGN_ML);
+                        }
+                        else
+                        {
+                            str_format(aBuf, sizeof(aBuf), "%s", *Option.m_pConfig ? "On" : "Off");
+                            Ui()->DoLabel(&ValueLabel, aBuf, SmallFontSize, TEXTALIGN_ML);
+                        }
+                    }
+                    else
+                    {
+                        if(IsSelected)
+                        {
+                            // Show previous value
+                            str_format(aBuf, sizeof(aBuf), "%d", (*Option.m_pConfig - 1 + Option.m_Max) % Option.m_Max);
+                            Ui()->DoLabel(&ValueLabel, aBuf, SmallFontSize, TEXTALIGN_ML);
+                            
+                            // Show current value
+                            ValueLabel.y += OptionSpacing * 0.5f;
+                            str_format(aBuf, sizeof(aBuf), "%d", *Option.m_pConfig);
+                            Ui()->DoLabel(&ValueLabel, aBuf, LargeFontSize, TEXTALIGN_ML);
+                            
+                            // Show next value
+                            ValueLabel.y += OptionSpacing * 0.5f;
+                            str_format(aBuf, sizeof(aBuf), "%d", (*Option.m_pConfig + 1) % Option.m_Max);
+                            Ui()->DoLabel(&ValueLabel, aBuf, SmallFontSize, TEXTALIGN_ML);
+                        }
+                        else
+                        {
+                            str_format(aBuf, sizeof(aBuf), "%d", *Option.m_pConfig);
+                            Ui()->DoLabel(&ValueLabel, aBuf, SmallFontSize, TEXTALIGN_ML);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Return key progress bar
+        CUIRect ReturnRect;
+        ReturnRect.x = Screen.x + Screen.w - 120.0f;
+        ReturnRect.y = Screen.y + Screen.h - 50.0f;
+        ReturnRect.w = 100.0f;
+        ReturnRect.h = 30.0f;
+
+        // Background
+        ReturnRect.Draw(ColorRGBA(0.3f, 0.3f, 0.3f, 0.5f), IGraphics::CORNER_ALL, 5.0f);
+
+        // Progress fill
+        if(s_ReturnHoldTime > 0.0f)
+        {
+            CUIRect FillRect = ReturnRect;
+            FillRect.h *= (1.0f - (s_ReturnHoldTime / ReturnHoldDuration));
+            FillRect.Draw(ColorRGBA(0.0f, 0.7f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 5.0f);
+        }
+
+        // Return text
+        Ui()->DoLabel(&ReturnRect, "RETURN", 14.0f, TEXTALIGN_MC);
+
+        // Handle key inputs
+        if(CheckHotKey(KEY_DOWN))
+        {
+            m_SelectedOption = (m_SelectedOption + 1) % m_vLoadingScreenOptions.size();
+        }
+        else if(CheckHotKey(KEY_UP))
+        {
+            m_SelectedOption = (m_SelectedOption - 1 + m_vLoadingScreenOptions.size()) % m_vLoadingScreenOptions.size();
+        }
+        else if(CheckHotKey(KEY_LEFT) || CheckHotKey(KEY_RIGHT))
+        {
+            SLoadingScreenOption &CurrentOption = m_vLoadingScreenOptions[m_SelectedOption];
+            if(str_comp(CurrentOption.m_pName, "Font") == 0)
+            {
+                int CurrentIdx = 0;
+                for(size_t f = 0; f < pFaces->size(); f++)
+                {
+                    if(str_comp(g_Config.m_ClCustomFont, pFaces->at(f).c_str()) == 0)
+                    {
+                        CurrentIdx = f;
+                        break;
+                    }
+                }
+                
+                if(CheckHotKey(KEY_LEFT))
+                    CurrentIdx = (CurrentIdx - 1 + pFaces->size()) % pFaces->size();
+                else
+                    CurrentIdx = (CurrentIdx + 1) % pFaces->size();
+                
+                str_copy(g_Config.m_ClCustomFont, pFaces->at(CurrentIdx).c_str());
+                TextRender()->SetCustomFace(g_Config.m_ClCustomFont);
+            }
+            else if(CurrentOption.m_IsCheckbox)
+            {
+                *CurrentOption.m_pConfig ^= 1;
+            }
+            else
+            {
+                if(CheckHotKey(KEY_LEFT))
+                    *CurrentOption.m_pConfig = (*CurrentOption.m_pConfig - 1 + CurrentOption.m_Max) % CurrentOption.m_Max;
+                else
+                    *CurrentOption.m_pConfig = (*CurrentOption.m_pConfig + 1) % CurrentOption.m_Max;
+            }
+        }
+
+        if(s_ReturnHoldTime >= ReturnHoldDuration)
+        {
+            m_LoadingOptionsActive = false;
+            g_Config.m_ClFirstLaunch = 0;
+            m_ShowStart = true;
+        }
+    }
+
     TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-	if(g_Config.m_ClFirstLaunch)
-	{
-    	RenderCenteredLabel("Welcome to FeX", "Enjoy the new experience!");
-	}
-    CUIRect instrBottom;
-    instrBottom.x = screenRect.x;
-    instrBottom.y = screenRect.y + screenRect.h - 40.0f;
-    instrBottom.w = screenRect.w;
-    instrBottom.h = 20.0f;
-    Ui()->DoLabel(&instrBottom, "FeX Loading...", 12.0f, TEXTALIGN_MC);
-
     Client()->UpdateAndSwap();
 }
 

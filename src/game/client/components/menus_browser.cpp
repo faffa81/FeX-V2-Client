@@ -1843,115 +1843,168 @@ void CMenus::RenderServerbrowserWars(CUIRect View)
     const std::vector<CWarEntry*>* pSections[] = {&vOnlineNames, &vOnlineClan, &vOffline};
     const char* pSectionTitles[] = {"Online entries (%d)", "Online clan entries (%d)", "Offline entries (%d)"};
 
-    char aBuf[256];
-    for(int Section = 0; Section < 3; Section++) 
-    {
-        // Header
-        CUIRect Header, GroupIcon, GroupLabel;
-        List.HSplitTop(ms_ListheaderHeight, &Header, &List);
-        s_ScrollRegion.AddRect(Header);
+	char aBuf[256];
+	for(int Section = 0; Section < 3; Section++) 
+	{
+		// Header
+		CUIRect Header, GroupIcon, GroupLabel;
+		List.HSplitTop(ms_ListheaderHeight, &Header, &List);
+		s_ScrollRegion.AddRect(Header);
 
-        Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_aListExtended[Section] ? 0.4f : 0.25f), IGraphics::CORNER_ALL, 5.0f);
-        Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
-        GroupIcon.Margin(2.0f, &GroupIcon);
+		Header.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, Ui()->HotItem() == &s_aListExtended[Section] ? 0.4f : 0.25f), IGraphics::CORNER_ALL, 5.0f);
+		Header.VSplitLeft(Header.h, &GroupIcon, &GroupLabel);
+		GroupIcon.Margin(2.0f, &GroupIcon);
 
-        // Minimize/Maximize button
-        TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-        TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-        Ui()->DoLabel(&GroupIcon, s_aListExtended[Section] ? FONT_ICON_MINUS : FONT_ICON_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
-        TextRender()->SetRenderFlags(0);
-        TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+		// Minimize/Maximize button
+		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | 
+									ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | 
+									ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | 
+									ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | 
+									ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+		Ui()->DoLabel(&GroupIcon, s_aListExtended[Section] ? FONT_ICON_MINUS : FONT_ICON_PLUS, GroupIcon.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+		TextRender()->SetRenderFlags(0);
+		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
 
-        // Section name
-        str_format(aBuf, sizeof(aBuf), Localize(pSectionTitles[Section]), (int)pSections[Section]->size());
-        Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
+		// Section name
+		str_format(aBuf, sizeof(aBuf), Localize(pSectionTitles[Section]), (int)pSections[Section]->size());
+		Ui()->DoLabel(&GroupLabel, aBuf, FontSize, TEXTALIGN_ML);
 
-        // Expand/collapse button
-        if(Ui()->DoButtonLogic(&s_aListExtended[Section], 0, &Header, BUTTONFLAG_LEFT))
-        {
-            s_aListExtended[Section] = !s_aListExtended[Section];
-        }
+		// Expand/collapse button
+		if(Ui()->DoButtonLogic(&s_aListExtended[Section], 0, &Header, BUTTONFLAG_LEFT))
+		{
+			s_aListExtended[Section] = !s_aListExtended[Section];
+		}
 
-        // Entries
-        if(s_aListExtended[Section])
-        {
-            static std::vector<CButtonContainer> s_vDeleteButtons;
-            s_vDeleteButtons.resize(pSections[Section]->size());
+		// Entries
+		if(s_aListExtended[Section])
+		{
+			static std::vector<CButtonContainer> s_vDeleteButtons;
+			s_vDeleteButtons.resize(pSections[Section]->size());
 
-            for(size_t i = 0; i < pSections[Section]->size(); i++)
-            {
-                CWarEntry* pEntry = (*pSections[Section])[i];
+			for(size_t i = 0; i < pSections[Section]->size(); i++)
+			{
+				CWarEntry* pEntry = (*pSections[Section])[i];
 
-                CUIRect Space;
-                List.HSplitTop(SpacingH, &Space, &List);
-                s_ScrollRegion.AddRect(Space);
+				CUIRect Space;
+				List.HSplitTop(SpacingH, &Space, &List);
+				s_ScrollRegion.AddRect(Space);
 
-                CUIRect Rect, DeleteButton;
-                List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f, &Rect, &List);
-                s_ScrollRegion.AddRect(Rect);
-                if(s_ScrollRegion.RectClipped(Rect))
-                    continue;
+				CUIRect Rect, DeleteButton;
+				List.HSplitTop(11.0f + 10.0f + 2 * 2.0f + 1.0f, &Rect, &List);
+				s_ScrollRegion.AddRect(Rect);
+				if(s_ScrollRegion.RectClipped(Rect))
+					continue;
 
-                const bool Inside = Ui()->HotItem() == pEntry;
+				// "Reset" by reassigning a default instance.
+				s_vDeleteButtons[i] = CButtonContainer();
+
+				const bool Inside = Ui()->HotItem() == pEntry;
 				int ButtonResult = Ui()->DoButtonLogic(pEntry, 0, &Rect, BUTTONFLAG_LEFT);
-                const ColorRGBA Color = pEntry->m_pWarType->m_Color.WithAlpha(Inside ? 0.5f : 0.25f);
-                Rect.Draw(Color, IGraphics::CORNER_ALL, 5.0f);
-                Rect.Margin(2.0f, &Rect);
+				const ColorRGBA BackColor = pEntry->m_pWarType->m_Color.WithAlpha(Inside ? 0.5f : 0.25f);
+				Rect.Draw(BackColor, IGraphics::CORNER_ALL, 5.0f);
+				Rect.Margin(2.0f, &Rect);
 
-                // Delete button
-                Rect.VSplitRight(20.0f, &Rect, &DeleteButton);
-                if(DoButton_FontIcon(&s_vDeleteButtons[i], FONT_ICON_TRASH, 0, &DeleteButton, IGraphics::CORNER_ALL))
-                {
-                    GameClient()->m_WarList.RemoveWarEntry(pEntry);
-                    continue;
-                }
+				if(Inside)
+				{
+					// Delete button
+					Rect.VSplitRight(20.0f, &Rect, &DeleteButton);
+					void *pDeleteId = (void *)(((uintptr_t)pEntry) ^ 0xABCDEF);
+					if(Ui()->DoButtonLogic(pDeleteId, 0, &DeleteButton, BUTTONFLAG_LEFT))
+					{
+						GameClient()->m_WarList.RemoveWarEntry(pEntry);
+						continue;
+					}
+					TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
+					TextRender()->SetRenderFlags(
+						ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
+						ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+						ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING |
+						ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+					Ui()->DoLabel(&DeleteButton, FONT_ICON_TRASH, DeleteButton.h * CUi::ms_FontmodHeight, TEXTALIGN_MC);
+					TextRender()->SetRenderFlags(0);
+					TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
+				}
 
-                // Name/Clan & Info
-                CUIRect NameRect, InfoRect;
-                Rect.HSplitMid(&NameRect, &InfoRect);
+				// Server info if online
+				if(pEntry->m_ServerInfo)
+				{
+					if(ButtonResult)
+					{
+						str_copy(g_Config.m_UiServerAddress, pEntry->m_ServerInfo->m_aAddress);
+						m_ServerBrowserShouldRevealSelection = true;
 
-                // Name/Clan
-                Ui()->DoLabel(&NameRect, str_comp(pEntry->m_aClan, "") != 0 ? pEntry->m_aClan : pEntry->m_aName, 
-                    FontSize, TEXTALIGN_ML);
+						if(ButtonResult == 1 && Ui()->DoDoubleClickLogic(pEntry))
+						{
+							Connect(g_Config.m_UiServerAddress);
+						}
+					}
+				}
 
-                // Server info if online
-                if(pEntry->m_ServerInfo)
-                {
-                    if(ButtonResult)
-                    {
-                        str_copy(g_Config.m_UiServerAddress, pEntry->m_ServerInfo->m_aAddress);
-                        m_ServerBrowserShouldRevealSelection = true;
-                        
-                        if(ButtonResult == 1 && Ui()->DoDoubleClickLogic(pEntry))
-                        {
-                            Connect(g_Config.m_UiServerAddress);
-                        }
-                    }
-                }
+				CUIRect NameRect, InfoRect;
+				Rect.HSplitMid(&NameRect, &InfoRect);
+				CUIRect IconRect, Temp;
+				float IconSize = 16.0f;
+				NameRect.VSplitLeft(IconSize, &IconRect, &Temp);
 
-                // War type  
-                TextRender()->TextColor(pEntry->m_pWarType->m_Color);
-                Ui()->DoLabel(&InfoRect, pEntry->m_pWarType->m_aWarName,
-                    FontSize - 1.0f, TEXTALIGN_ML);
-                TextRender()->TextColor(TextRender()->DefaultTextColor());
+				if(g_Config.m_ClEntryIcons)
+				{
+					IGraphics::CTextureHandle IconImageId;
+					if(str_comp(pEntry->m_pWarType->m_aWarName, "enemy") == 0)
+						IconImageId = g_pData->m_aImages[IMAGE_SWORD_ICON].m_Id;
+					else if(str_comp(pEntry->m_pWarType->m_aWarName, "team") == 0)
+						IconImageId = g_pData->m_aImages[IMAGE_TEAM_ICON].m_Id;
+					else if(str_comp(pEntry->m_pWarType->m_aWarName, "helper") == 0)
+						IconImageId = g_pData->m_aImages[IMAGE_SWORD_ICON].m_Id;
+					
+					Graphics()->BlendNormal();
+					Graphics()->TextureSet(IconImageId);
+					Graphics()->QuadsBegin();
+					Graphics()->SetColor(pEntry->m_pWarType->m_Color.WithAlpha(1.0f));
+					IGraphics::CQuadItem iconQuad(IconRect.x, IconRect.y, IconRect.w, IconRect.h);
+					Graphics()->QuadsDrawTL(&iconQuad, 1);
+					Graphics()->QuadsEnd();
+				}
 
-                // Reason tooltip
-                if(str_comp(pEntry->m_aReason, "") != 0)
-                {
-                    GameClient()->m_Tooltips.DoToolTip(pEntry, &Rect, pEntry->m_aReason);
-                }
-            }
-        }
+				CUIRect SkinRect;
+				float SkinSlotSize = 16.0f;
+				Temp.VSplitLeft(SkinSlotSize, &SkinRect, &NameRect);
 
-        CUIRect Space;
-        List.HSplitTop(SpacingH, &Space, &List);
-        s_ScrollRegion.AddRect(Space);
-    }
+				Ui()->DoLabel(&NameRect, (str_comp(pEntry->m_aClan, "") != 0 ? pEntry->m_aClan : pEntry->m_aName),
+							FontSize, TEXTALIGN_ML);
 
-    s_ScrollRegion.End();
+				char aInfo[128];
+				if(pEntry->m_ServerInfo)
+				{
+					str_format(aInfo, sizeof(aInfo), "%s [%d/%d]", 
+							pEntry->m_pWarType->m_aWarName,
+							pEntry->m_ServerInfo->m_NumPlayers,
+							pEntry->m_ServerInfo->m_MaxPlayers);
+				}
+				else
+				{
+					str_format(aInfo, sizeof(aInfo), "%s", pEntry->m_pWarType->m_aWarName);
+				}
+				TextRender()->TextColor(pEntry->m_pWarType->m_Color);
+				Ui()->DoLabel(&InfoRect, aInfo, FontSize - 1.0f, TEXTALIGN_ML);
+				TextRender()->TextColor(TextRender()->DefaultTextColor());
 
-    // Add war section
-    RenderWarListAddSection(ServerWars);
+				if(str_comp(pEntry->m_aReason, "") != 0)
+				{
+					GameClient()->m_Tooltips.DoToolTip(pEntry, &Rect, pEntry->m_aReason);
+				}
+			}
+
+			CUIRect Space;
+			List.HSplitTop(SpacingH, &Space, &List);
+			s_ScrollRegion.AddRect(Space);
+		}
+	}
+	s_ScrollRegion.End();
+
+	// Add war section
+	RenderWarListAddSection(ServerWars);
+
 }
 
 void CMenus::RenderWarListAddSection(CUIRect View)
@@ -2103,10 +2156,10 @@ enum
 
 void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
 {
-	CUIRect FilterTabButton, InfoTabButton, FriendsTabButton, WarsTabButton;
-	TabBar.VSplitLeft(TabBar.w / 4.0f, &FilterTabButton, &TabBar);
-	TabBar.VSplitLeft(TabBar.w / 4.0f, &InfoTabButton, &TabBar);
-	TabBar.VSplitMid(&FriendsTabButton, &WarsTabButton);
+    CUIRect FilterTabButton, InfoTabButton, FriendsTabButton, WarsTabButton;
+    TabBar.VSplitLeft(TabBar.w / 4.0f, &FilterTabButton, &TabBar);
+    TabBar.VSplitLeft(TabBar.w / 4.0f, &InfoTabButton, &TabBar);
+    TabBar.VSplitMid(&FriendsTabButton, &WarsTabButton);
 
     const ColorRGBA ColorActive = ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f);
     const ColorRGBA ColorInactive = ColorRGBA(0.0f, 0.0f, 0.0f, 0.15f);
@@ -2118,38 +2171,69 @@ void CMenus::RenderServerbrowserTabBar(CUIRect TabBar)
     }
 
     TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-    TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
-
-	TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
+    TextRender()->SetRenderFlags(
+        ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH |
+        ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING |
+        ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING |
+        ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT |
+        ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 
     static CButtonContainer s_FilterTabButton;
-    if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER], &ColorInactive, &ColorActive))
+    if(DoButton_MenuTab(&s_FilterTabButton, FONT_ICON_LIST_UL,
+        g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FILTERS, &FilterTabButton,
+        IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FILTER],
+        &ColorInactive, &ColorActive))
     {
         g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FILTERS;
     }
     GameClient()->m_Tooltips.DoToolTip(&s_FilterTabButton, &FilterTabButton, Localize("Server filter"));
 
     static CButtonContainer s_InfoTabButton;
-    if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO], &ColorInactive, &ColorActive))
+    if(DoButton_MenuTab(&s_InfoTabButton, FONT_ICON_INFO,
+        g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_INFO, &InfoTabButton,
+        IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_INFO],
+        &ColorInactive, &ColorActive))
     {
         g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_INFO;
     }
     GameClient()->m_Tooltips.DoToolTip(&s_InfoTabButton, &InfoTabButton, Localize("Server info"));
 
     static CButtonContainer s_FriendsTabButton;
-    if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART, g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS], &ColorInactive, &ColorActive))
+    if(DoButton_MenuTab(&s_FriendsTabButton, FONT_ICON_HEART,
+        g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_FRIENDS, &FriendsTabButton,
+        IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_FRIENDS],
+        &ColorInactive, &ColorActive))
     {
         g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_FRIENDS;
     }
     GameClient()->m_Tooltips.DoToolTip(&s_FriendsTabButton, &FriendsTabButton, Localize("Friends"));
-
-	static CButtonContainer s_WarsTabButton;
-    if(DoButton_MenuTab(&s_WarsTabButton, "W", g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_WARS, &WarsTabButton, IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_WARS], &ColorInactive, &ColorActive))
+    
+    static CButtonContainer s_WarsTabButton;
+    const char *pWarsLabel = g_Config.m_ClEntryIcons ? "" : "W";
+    if(DoButton_MenuTab(&s_WarsTabButton, pWarsLabel,
+        g_Config.m_UiToolboxPage == UI_TOOLBOX_PAGE_WARS, &WarsTabButton,
+        IGraphics::CORNER_T, &m_aAnimatorsSmallPage[SMALL_TAB_BROWSER_WARS],
+        &ColorInactive, &ColorActive))
     {
         g_Config.m_UiToolboxPage = UI_TOOLBOX_PAGE_WARS;
     }
     GameClient()->m_Tooltips.DoToolTip(&s_WarsTabButton, &WarsTabButton, Localize("Wars"));
+
+    if(g_Config.m_ClEntryIcons)
+    {
+        float IconSize = WarsTabButton.h * 0.8f;
+        float IconPosX = WarsTabButton.x + (WarsTabButton.w - IconSize) / 2.0f;
+        float IconPosY = WarsTabButton.y + (WarsTabButton.h - IconSize) / 2.0f;
+        float Alpha = 1.0f;
+
+        Graphics()->BlendNormal();
+        Graphics()->TextureSet(g_pData->m_aImages[IMAGE_SWORD_ICON].m_Id);
+        Graphics()->QuadsBegin();
+        Graphics()->SetColor(1.f, 1.f, 1.f, Alpha);
+        IGraphics::CQuadItem warQuad(IconPosX, IconPosY, IconSize, IconSize);
+        Graphics()->QuadsDrawTL(&warQuad, 2);
+        Graphics()->QuadsEnd();
+    }
 
     TextRender()->SetRenderFlags(0);
     TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);

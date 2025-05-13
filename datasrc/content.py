@@ -228,6 +228,12 @@ container.sounds.Add(SoundSet("menu", ["audio/music_menu.wv"]))
 
 # FeX
 image_muted_icon = Image("muted_icon", "fex/icons/muted_icon.png")
+image_settings_icon = Image("settings_icon", "fex/icons/settings_icon.png")
+image_clan_icon = Image("clan_icon", "fex/icons/clans.png")
+image_sword_icon = Image("sword_icon", "fex/icons/sword.png")
+image_team_icon = Image("team_icon", "fex/icons/team.png")
+image_goodluck_icon = Image("goodluck_icon", "fex/icons/gl.png")
+image_fex_icon = Image("fex_icon", "fex/icons/FeXIcon.png")
 
 image_null = Image("null", "")
 image_particles = Image("particles", "particles.png")
@@ -261,8 +267,13 @@ container.images.Add(image_extras)
 container.images.Add(Image("raceflag", "race_flag.png"))
 
 # FeX
-
 container.images.Add(image_muted_icon)
+container.images.Add(image_settings_icon)
+container.images.Add(image_clan_icon)
+container.images.Add(image_sword_icon)
+container.images.Add(image_team_icon)
+container.images.Add(image_goodluck_icon)
+container.images.Add(image_fex_icon)
 
 container.pickups.Add(Pickup("health"))
 container.pickups.Add(Pickup("armor"))
@@ -286,8 +297,13 @@ set_hud = SpriteSet("hud", image_hud, 16, 16)
 set_extras = SpriteSet("extras", image_extras, 16, 16)
 
 # FeX
-
 set_muted_icon = SpriteSet("muted_icon", image_muted_icon, 1, 1)
+set_settings_icon = SpriteSet("settings_icon", image_settings_icon, 1, 1)
+set_clan_icon = SpriteSet("clan_icon", image_clan_icon, 1, 1)
+set_sword_icon = SpriteSet("sword_icon", image_sword_icon, 1, 1)
+set_team_icon = SpriteSet("team_icon", image_team_icon, 1, 1)
+set_goodluck_icon = SpriteSet("goodluck_icon", image_goodluck_icon, 1, 1)
+set_fex_icon = SpriteSet("fex_icon", image_fex_icon, 1, 1)
 
 container.spritesets.Add(set_particles)
 container.spritesets.Add(set_game)
@@ -302,8 +318,13 @@ container.spritesets.Add(set_hud)
 container.spritesets.Add(set_extras)
 
 # FeX
-
 container.spritesets.Add(set_muted_icon)
+container.spritesets.Add(set_settings_icon)
+container.spritesets.Add(set_clan_icon)
+container.spritesets.Add(set_sword_icon)
+container.spritesets.Add(set_team_icon)
+container.spritesets.Add(set_goodluck_icon)
+container.spritesets.Add(set_fex_icon)
 
 container.sprites.Add(Sprite("part_slice", set_particles, 0,0,1,1))
 container.sprites.Add(Sprite("part_ball", set_particles, 1,0,1,1))
@@ -432,8 +453,13 @@ container.sprites.Add(Sprite("guiicon_friend", set_guiicons, 8,0,4,2))
 container.sprites.Add(Sprite("audio_source", set_audio_source, 0,0,1,1))
 
 # FeX
-
 container.sprites.Add(Sprite("muted_icon", set_muted_icon, 0,0,1,1))
+container.sprites.Add(Sprite("settings_icon", set_settings_icon, 0,0,1,1))
+container.sprites.Add(Sprite("clan_icon", set_clan_icon, 0,0,1,1))
+container.sprites.Add(Sprite("sword_icon", set_sword_icon, 0,0,1,1))
+container.sprites.Add(Sprite("team_icon", set_team_icon, 0,0,1,1))
+container.sprites.Add(Sprite("goodluck_icon", set_goodluck_icon, 0,0,1,1))
+container.sprites.Add(Sprite("fex_icon", set_fex_icon, 0,0,1,1))
 
 container.sprites.Add(Sprite("hook_strong", set_strongweak, 0,0,1,1))
 container.sprites.Add(Sprite("hook_weak", set_strongweak, 1,0,1,1))

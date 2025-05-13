@@ -226,7 +226,7 @@ void CMenus::RenderFex(CUIRect MainView, int CurPage)
 	if(CurPage == FEX_PAGE_1)
 	{
 		// FeX Settings Tab
-		CUIRect FreezeKillSettings, AutomationSettings, Settings1v1, FastInputSettings, ChatSettings, MiscSettings, Label, Button;
+		CUIRect FreezeKillSettings, AutomationSettings, Settings1v1, FastInputSettings, ChatSettings, MiscSettings, FrozenTeeHudSettings, Label, Button;
 		
 		static CScrollRegion s_ScrollRegion;
 		vec2 ScrollOffset(0.0f, 0.0f);
@@ -381,7 +381,7 @@ void CMenus::RenderFex(CUIRect MainView, int CurPage)
 			// ************** Fast Input Settings ************** //
 			{
 				FastInputSettings.HSplitTop(10.0f, nullptr, &FastInputSettings);
-				FastInputSettings.HSplitTop(385.0f, &FastInputSettings, nullptr);
+				FastInputSettings.HSplitTop(385.0f, &FastInputSettings, &FrozenTeeHudSettings);
 				if(s_ScrollRegion.AddRect(FastInputSettings))
 				{
 					FastInputSettings.Draw(ColorRGBA(1,1,1,0.25f), IGraphics::CORNER_ALL, 5.0f);
@@ -435,6 +435,62 @@ void CMenus::RenderFex(CUIRect MainView, int CurPage)
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClAntiPingNegativeBuffer, Localize("Negative stability buffer (for Gores)"), &g_Config.m_ClAntiPingNegativeBuffer, &FastInputSettings, LineSize);
 					FastInputSettings.HSplitTop(LineSize, &Button, &FastInputSettings);
 					Ui()->DoScrollbarOption(&g_Config.m_ClAntiPingUncertaintyScale, &g_Config.m_ClAntiPingUncertaintyScale, &Button, Localize("Uncertainty duration"), 50, 400, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_NOCLAMPVALUE, "%");
+				}
+			}
+
+			// ************** Frozen Hud Settings ************** //
+			{
+				FrozenTeeHudSettings.HSplitTop(Margin, nullptr, &FrozenTeeHudSettings);
+				FrozenTeeHudSettings.HSplitTop(165.0f, &FrozenTeeHudSettings, &FastInputSettings);
+				if(s_ScrollRegion.AddRect(FrozenTeeHudSettings))
+				{
+					FrozenTeeHudSettings.Draw(ColorRGBA(1,1,1,0.25f), IGraphics::CORNER_ALL, 5.0f);
+					FrozenTeeHudSettings.VMargin(Margin, &FrozenTeeHudSettings);
+
+					FrozenTeeHudSettings.HSplitTop(HeaderHeight, &Button, &FrozenTeeHudSettings);
+					Ui()->DoLabel(&Button, Localize("Frozen Tee Hud"), FontSize, TEXTALIGN_MC);
+					{
+						// ***** FROZEN TEE HUD ***** //
+
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowFrozenHud, ("Enable Frozen Tee Display"), &g_Config.m_ClShowFrozenHud, &FrozenTeeHudSettings, LineMargin);
+						FrozenTeeHudSettings.HSplitTop(5.0f, &Button, &FrozenTeeHudSettings);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClShowFrozenHudSkins, ("Use Skins Instead of Ninja Tees"), &g_Config.m_ClShowFrozenHudSkins, &FrozenTeeHudSettings, LineMargin);
+						DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClFrozenHudTeamOnly, ("Only Show After Joining a Team"), &g_Config.m_ClFrozenHudTeamOnly, &FrozenTeeHudSettings, LineMargin);
+						{
+							FrozenTeeHudSettings.HSplitTop(20.0f, &Button, &FrozenTeeHudSettings);
+							Button.VSplitLeft(140.0f, &Label, &Button);
+							char aBuf[64];
+							str_format(aBuf, sizeof(aBuf), "%s: %i", "Max Rows", g_Config.m_ClFrozenMaxRows);
+							Ui()->DoLabel(&Label, aBuf, 14.0f, TEXTALIGN_LEFT);
+							g_Config.m_ClFrozenMaxRows = (int)(Ui()->DoScrollbarH(&g_Config.m_ClFrozenMaxRows, &Button, (g_Config.m_ClFrozenMaxRows - 1) / 5.0f) * 5.0f) + 1;
+						}
+						{
+							FrozenTeeHudSettings.HSplitTop(20.0f, &Button, &FrozenTeeHudSettings);
+							Button.VSplitLeft(140.0f, &Label, &Button);
+							char aBuf[64];
+							str_format(aBuf, sizeof(aBuf), "%s: %i", "Tee Size", g_Config.m_ClFrozenHudTeeSize);
+							Ui()->DoLabel(&Label, aBuf, 14.0f, TEXTALIGN_LEFT);
+							g_Config.m_ClFrozenHudTeeSize = (int)(Ui()->DoScrollbarH(&g_Config.m_ClFrozenHudTeeSize, &Button, (g_Config.m_ClFrozenHudTeeSize - 8) / 19.0f) * 19.0f) + 8;
+						}
+
+						{
+							CUIRect CheckBoxRect, CheckBoxRect2;
+							FrozenTeeHudSettings.HSplitTop(LineMargin, &CheckBoxRect, &FrozenTeeHudSettings);
+							CheckBoxRect.VSplitMid(&CheckBoxRect, &CheckBoxRect2);
+							if(DoButton_CheckBox(&g_Config.m_ClShowFrozenText, Localize("Tees Left Alive Text"), g_Config.m_ClShowFrozenText >= 1, &CheckBoxRect))
+							{
+								g_Config.m_ClShowFrozenText = g_Config.m_ClShowFrozenText >= 1 ? 0 : 1;
+							}
+							if(g_Config.m_ClShowFrozenText)
+							{
+								static int s_CountFrozenText = 0;
+								if(DoButton_CheckBox(&s_CountFrozenText, Localize("Count Frozen Tees"), g_Config.m_ClShowFrozenText == 2, &CheckBoxRect2))
+								{
+									g_Config.m_ClShowFrozenText = g_Config.m_ClShowFrozenText != 2 ? 2 : 1;
+								}
+							}
+						}
+					}
 				}
 			}
 		}

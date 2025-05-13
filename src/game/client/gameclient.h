@@ -81,6 +81,8 @@
 #include "components/fex/fexbindwheel.h"
 #include "components/fex/fexplayerindicator.h"
 
+#include "components/fex/translator.h"
+
 class CGameInfo
 {
 public:
@@ -183,6 +185,7 @@ public:
 	CBindWheel m_Bindwheel;
 	CVisual m_Visual;
 	CUpdate m_Update;
+	CTranslator m_Translate;
 
 	// all components	
 	CInfoMessages m_InfoMessages;
@@ -351,6 +354,9 @@ public:
 	}
 	const char *NetobjCorrectedOn() { return m_NetObjHandler.CorrectedObjOn(); }
 
+	void OnClientStateChange(int ClientID);
+	int m_PredictedDummyId;
+
 	bool m_SuppressEvents;
 	bool m_NewTick;
 	bool m_NewPredictedTick;
@@ -364,6 +370,12 @@ public:
 	};
 	int m_ServerMode;
 	CGameInfo m_GameInfo;
+
+	struct TranslationSettings {
+		bool Enabled;
+		char aTargetLang[8];
+	};
+	std::map<int, TranslationSettings> m_TranslationSettings;
 
 	char m_aSavedLocalRconPassword[sizeof(g_Config.m_SvRconPassword)] = "";
 
@@ -511,6 +523,8 @@ public:
 		bool m_DeepFrozen;
 		bool m_LiveFrozen;
 
+		bool m_IsFeXClient;
+
 		CCharacterCore m_Predicted;
 		CCharacterCore m_PrevPredicted;
 
@@ -655,11 +669,10 @@ public:
 	static void ConDrawScore(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveScore(IConsole::IResult *pResult, void *pUserData);
 	void OnConsoleInit() override;
-	
-	static void ConTASRecord(IConsole::IResult *pResult, void *pUserData);
-	static void ConTASPlay(IConsole::IResult *pResult, void *pUserData);
-	static void ConTASSpeed(IConsole::IResult *pResult, void *pUserData);
-	static void ConTASStop(IConsole::IResult *pResult, void *pUserData);
+
+	static void ConTranslate(IConsole::IResult *pResult, void *pUserData);
+	static void ConLanguageChat(IConsole::IResult *pResult, void *pUserData);
+
 	void OnStateChange(int NewState, int OldState) override;
 	template<typename T>
 	void ApplySkin7InfoFromGameMsg(const T *pMsg, int ClientId, int Conn);
@@ -979,7 +992,6 @@ private:
 
 	vec2 GetFreezePos(int ClientId);
 
-	int m_PredictedDummyId;
 	int m_IsDummySwapping;
 	CCharOrder m_CharOrder;
 	int m_aSwitchStateTeam[NUM_DUMMIES];

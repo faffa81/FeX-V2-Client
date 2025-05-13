@@ -259,6 +259,10 @@ void CBindchat::OnConsoleInit()
 	AddBindDefault(".delclanteam", "remove_war_clan_index 2");
 	AddBindDefault(".unclanteam", "remove_war_clan_index 2");
 
+	AddBindDefault(".t", "translate");
+    AddBindDefault(".tr", "translate");
+    AddBindDefault(".lt", "lasttranslate");
+
 	// Default Binds (!)
     AddBindDefault("!help", "exec data/fex/binds/help.cfg");
 	AddBindDefault("!extra", "exec data/fex/binds/extra.cfg");
@@ -322,8 +326,6 @@ void CBindchat::OnConsoleInit()
 	AddBindDefault("!addclanteam", "war_clan_index 2");
 	AddBindDefault("!delclanteam", "remove_war_clan_index 2");
 	AddBindDefault("!unclanteam", "remove_war_clan_index 2");
-
-	AddBindDefault(".amsg", "amsg");
 }
 
 void CBindchat::ExecuteBind(int Bind, const char *pArgs)

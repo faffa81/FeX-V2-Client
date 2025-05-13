@@ -184,6 +184,7 @@ void CGameClient::OnConsoleInit()
 						  &m_FreezeKill,
 						  &m_Update,
 						  &m_FexUpdater,
+						  &m_Translate,
 
 					      &CMenus::m_Binder,
 					      &m_GameConsole,
@@ -300,6 +301,120 @@ void CGameClient::OnConsoleInit()
     Console()->Register("+enemy_score", "", CFGFLAG_CLIENT, ConAddEnemyScore, this, "Add score for enemy");
 	Console()->Register("draw_score", "", CFGFLAG_CLIENT, ConDrawScore, this, "Scores are draw");
 	Console()->Register("remove_score", "", CFGFLAG_CLIENT, ConRemoveScore, this, "Accidental score can be withdrawed");
+
+	Console()->Register("t", "?i[use_id] s[name/id] s[langcode] r[message]", CFGFLAG_CLIENT, ConTranslate, this, "Translate chat message");
+	Console()->Register("lc", "?s[on/off] s[langcode]", CFGFLAG_CLIENT, ConLanguageChat, this, "Configure auto-translation");
+}
+
+void CGameClient::ConTranslate(IConsole::IResult* pResult, void* pUserData)
+{
+    CGameClient* pClient = static_cast<CGameClient*>(pUserData);
+    
+    bool UseId = false;
+    const char* pTarget;
+    const char* pLangCode;
+    const char* pMsg;
+    
+    if(pResult->NumArguments() == 3)
+    {
+        // .t <name/id> <langcode> <message>
+        pTarget = pResult->GetString(0);
+        pLangCode = pResult->GetString(1);
+        pMsg = pResult->GetString(2);
+    }
+    else if(pResult->NumArguments() == 4)
+    {
+        // .t <use_id> <name/id> <langcode> <message>
+        UseId = pResult->GetInteger(0) != 0;
+        pTarget = pResult->GetString(1);
+        pLangCode = pResult->GetString(2);
+        pMsg = pResult->GetString(3);
+    }
+    else
+    {
+        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Usage: .t [use_id] <name/id> <langcode> <message>");
+        return;
+    }
+
+    int TargetID = -1;
+    if(UseId)
+    {
+        TargetID = str_toint(pTarget);
+        if(TargetID < 0 || TargetID >= MAX_CLIENTS)
+        {
+            pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Invalid client ID");
+            return;
+        }
+    }
+    else
+    {
+        TargetID = pClient->GetClientId(pTarget);
+        if(TargetID == -1)
+        {
+            pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Could not find player");
+            return;
+        }
+    }
+
+    if(!pClient->m_aClients[TargetID].m_Active)
+    {
+        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Player not active");
+        return;
+    }
+
+    const char* pTranslated = CTranslator::Translate(pMsg, pLangCode);
+    if(str_comp(pTranslated, "Translation failed") == 0)
+    {
+        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Translation failed");
+        return;
+    }
+
+    pClient->m_Chat.SendChat(0, pTranslated);
+    pClient->m_LastTranslatedClientId = TargetID;
+}
+
+void CGameClient::ConLanguageChat(IConsole::IResult* pResult, void* pUserData)
+{
+    CGameClient* pClient = static_cast<CGameClient*>(pUserData);
+    TranslationSettings& Settings = pClient->m_TranslationSettings[pClient->m_Snap.m_LocalClientId];
+
+    if(pResult->NumArguments() == 0)
+    {
+        char aBuf[128];
+        str_format(aBuf, sizeof(aBuf), "Auto-translation is %s. Language: %s", 
+            Settings.Enabled ? "enabled" : "disabled", 
+            Settings.aTargetLang);
+        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", aBuf);
+        return;
+    }
+
+    if(pResult->NumArguments() >= 1)
+    {
+        const char* pEnabled = pResult->GetString(0);
+        if(str_comp_nocase(pEnabled, "on") == 0)
+            Settings.Enabled = true;
+        else if(str_comp_nocase(pEnabled, "off") == 0)
+            Settings.Enabled = false;
+        else
+            Settings.Enabled = !Settings.Enabled; // Toggle if not specified
+    }
+
+    if(pResult->NumArguments() >= 2)
+    {
+        const char* pLang = pResult->GetString(1);
+        str_copy(Settings.aTargetLang, pLang, sizeof(Settings.aTargetLang));
+    }
+    else if(Settings.aTargetLang[0] == 0)
+    {
+        // Set default language if none specified
+        str_copy(Settings.aTargetLang, "en", sizeof(Settings.aTargetLang));
+    }
+
+    char aBuf[128];
+    str_format(aBuf, sizeof(aBuf), "Auto-translation %s. Language set to: %s", 
+        Settings.Enabled ? "enabled" : "disabled", 
+        Settings.aTargetLang);
+    pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", aBuf);
 }
 
 static void GenerateTimeoutCode(char *pTimeoutCode)
@@ -477,20 +592,21 @@ void CGameClient::OnInit()
 		pChecksum->m_aComponentsChecksum[i] = Size;
 	}
 
-	m_Menus.RenderFadeLoadingScreen();
-	if(g_Config.m_ClCustomLoadingScreen)
-	{
-		m_Menus.ResetFadeLoading(); 
-		while(!m_Menus.FadeLoadingDone())
-		{
-			m_Menus.RenderFadeLoadingScreen();
-		}
-		m_Menus.FinishLoading();
-	}
-	else
-	{
-		m_Menus.FinishLoading();
-	}	
+	// m_Menus.RenderFadeLoadingScreen();
+	// m_Menus.m_LoadingOptionsActive = true;
+	// if(g_Config.m_ClCustomLoadingScreen)
+	// {
+	// 	m_Menus.ResetFadeLoading(); 
+	// 	while(!m_Menus.FadeLoadingDone())
+	// 	{
+	// 		m_Menus.RenderFadeLoadingScreen();
+	// 	}
+	// 	m_Menus.FinishLoading();
+	// }
+	// else
+	// {
+	m_Menus.FinishLoading();
+	// }	
 	log_trace("gameclient", "initialization finished after %.2fms", (time_get() - OnInitStart) * 1000.0f / (float)time_freq());
 }
 
@@ -922,6 +1038,13 @@ void CGameClient::OnConnected()
 
 		// send the initial info
 		SendInfo(true);
+		if(g_Config.m_ClAllowOthersSeeFex)
+		{
+			CMsgPacker Msg(NETMSG_FEXINFO);
+			Msg.AddInt(m_Snap.m_LocalClientId);
+			
+			Client()->SendMsg(IClient::CONN_MAIN, &Msg, MSGFLAG_VITAL|MSGFLAG_NORECORD);
+		}
 		// we should keep this in for now, because otherwise you can't spectate
 		// people at start as the other info 64 packet is only sent after the first
 		// snap
@@ -1390,7 +1513,29 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		{
 			CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
 
-			if((pMsg->m_Team == 1 && (m_aClients[m_aLocalIds[0]].m_Team != m_aClients[m_aLocalIds[1]].m_Team || m_Teams.Team(m_aLocalIds[0]) != m_Teams.Team(m_aLocalIds[1]))) || pMsg->m_Team > 1)
+			// First handle translation
+			LastMessageInfo& Info = m_LastMessages[pMsg->m_ClientId];
+			str_copy(Info.aMessage, pMsg->m_pMessage, sizeof(Info.aMessage));
+			Info.Time = time_get();
+
+			auto it = m_TranslationMap.find(pMsg->m_ClientId);
+			if(it != m_TranslationMap.end() && pMsg->m_ClientId != m_Snap.m_LocalClientId)
+			{
+				const char* pTargetLang = GetLanguageFromFilename(g_Config.m_ClLanguagefile);
+				const char* pTranslated = CTranslator::Translate(pMsg->m_pMessage, pTargetLang);
+				if(str_comp(pTranslated, "Translation failed") != 0)
+				{
+					str_copy(Info.aLanguage, it->second.aLanguage, sizeof(Info.aLanguage));
+
+					char aBuf[512];
+					str_format(aBuf, sizeof(aBuf), "[%s] %s", m_aClients[pMsg->m_ClientId].m_aName, pTranslated);
+					m_Chat.AddLine(-4, pMsg->m_Team, aBuf);
+				}
+			}
+
+			// Original team chat handling
+			if((pMsg->m_Team == 1 && (m_aClients[m_aLocalIds[0]].m_Team != m_aClients[m_aLocalIds[1]].m_Team || 
+			m_Teams.Team(m_aLocalIds[0]) != m_Teams.Team(m_aLocalIds[1]))) || pMsg->m_Team > 1)
 			{
 				m_Chat.OnMessage(MsgId, pRawMsg);
 			}
@@ -1534,6 +1679,14 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		CNetMsg_Sv_MapSoundGlobal *pMsg = (CNetMsg_Sv_MapSoundGlobal *)pRawMsg;
 		m_MapSounds.Play(CSounds::CHN_GLOBAL, pMsg->m_SoundId);
 	}
+    else if(MsgId == NETMSG_FEXINFO)
+    {
+        const int ClientID = pUnpacker->GetInt();
+        if(ClientID >= 0 && ClientID < MAX_CLIENTS)
+        {
+            m_aClients[ClientID].m_IsFeXClient = true;
+        }
+    }
 }
 
 void CGameClient::OnStateChange(int NewState, int OldState)
@@ -5525,4 +5678,9 @@ int CGameClient::GetClientId(const char *pName)
 		}
 	}
 	return -1;
+}
+
+void CGameClient::OnClientStateChange(int ClientID)
+{
+    m_WarList.UpdateClientWarStates(ClientID);
 }

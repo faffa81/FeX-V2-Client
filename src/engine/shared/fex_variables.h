@@ -17,10 +17,32 @@ MACRO_CONFIG_INT(ClFrozenHudTeamOnly, fx_frozen_tees_only_inteam, 0, 0, 1, CFGFL
 
 MACRO_CONFIG_INT(ClSpecmenuID, fx_spec_menu_ID, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Shows player IDs in spectate menu")
 
-MACRO_CONFIG_INT(ClLimitMouseToScreen, fx_limit_mouse_to_screen, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Limit mouse to screen boundries")
-MACRO_CONFIG_INT(ClScaleMouseDistance, fx_scale_mouse_distance, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Improve mouse precision by scaling max distance to 1000")
+// Notify When Last
+MACRO_CONFIG_INT(ClNotifyWhenLast, fx_last_notify, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Notify when you are last")
+MACRO_CONFIG_STR(ClNotifyWhenLastText, fx_last_notify_text, 64, "Last!", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Text for last notify")
+MACRO_CONFIG_COL(ClNotifyWhenLastColor, fx_last_notify_color, 29057, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Color for last notify")
 
-MACRO_CONFIG_INT(ClHammerRotatesWithCursor, fx_hammer_rotates_with_cursor, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow your hammer to rotate like other weapons")
+MACRO_CONFIG_INT(ClEntryIcons, fx_entry_icons, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show Entry icons for everything(Useful for adding wars and gives a linear feel to the client.)")
+
+// ChatBubbles and InGame info
+MACRO_CONFIG_INT(ClChatBubble, fx_chatbubble, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Toggles Chatbubble over senders head on or Off")
+MACRO_CONFIG_INT(ClShowOthersInMenu, fx_show_others_in_menu , 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Shows The Settings Icon if Someones in The Menu")
+MACRO_CONFIG_INT(ClShowOwnMenuToOthers, fx_show_self_in_menu, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show The Settings Icon to Others When In The Menu")
+
+MACRO_CONFIG_INT(ClSpectatorActionHud, fx_spectator_action_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show spectator action HUD")
+MACRO_CONFIG_INT(ClSpectatorActionIcons, fx_spectator_action_icons, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show icons instead of text in spectator action HUD")
+
+MACRO_CONFIG_INT(ClShowFeXIcon, fx_show_fex_icon, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show FeX icon in scoreboard")
+MACRO_CONFIG_INT(ClAllowOthersSeeFex, fx_allow_others_see_fex, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow others to see that you're using FeX client")
+MACRO_CONFIG_INT(ClScoreboardScale, fx_scoreboard_scale, 12, 8, 15, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Scale of scoreboard text")
+
+// Pingcircle next to name
+MACRO_CONFIG_INT(ClPingNameCircle, fx_nameplate_ping_circle, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Shows a circle next to nameplate to indicate ping")
+
+// MACRO_CONFIG_INT(ClLimitMouseToScreen, fx_limit_mouse_to_screen, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Limit mouse to screen boundries")
+// MACRO_CONFIG_INT(ClScaleMouseDistance, fx_scale_mouse_distance, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Improve mouse precision by scaling max distance to 1000")
+
+// MACRO_CONFIG_INT(ClHammerRotatesWithCursor, fx_hammer_rotates_with_cursor, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow your hammer to rotate like other weapons")
 
 // FeX Freeze Kill
 
@@ -307,7 +329,7 @@ MACRO_CONFIG_INT(ClStrongWeakColorId, fx_strong_weak_color_id, 0, 0, 1, CFGFLAG_
 MACRO_CONFIG_INT(ClUpdate, fx_update, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Inform with a github open link when a new update is available")
 
 // FeX First Launch
-MACRO_CONFIG_INT(ClFirstLaunch, fx_first_launch, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "First launch of the client")
+MACRO_CONFIG_INT(ClFirstLaunch, fx_first_launch, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "First launch of the client")
 
 // FeX Stored Servers
 MACRO_CONFIG_STR(UiLastJoinedServer, fx_last_joined_server, 1024, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Last joined server")
@@ -332,3 +354,24 @@ MACRO_CONFIG_COL(ClStartMenuColor, fx_start_menu_color, 0, CFGFLAG_CLIENT | CFGF
 MACRO_CONFIG_COL(ClStartMenuTextColor, fx_start_menu_text_color, 0, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Custom text color of the start menu")
 
 MACRO_CONFIG_INT(ClCustomLoadingScreen, fx_custom_loading, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show custom loading screen");
+
+// FeX Update Logs
+MACRO_CONFIG_INT(ClLastViewedUpdateLog, fx_last_viewed_updatelog, 0, 0, 1000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Version number of last viewed update log")
+
+// Discord Integration with Warlist
+MACRO_CONFIG_INT(ClDiscordWebhooks, fx_discord_webhook, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Toggle Discord Webhooks for Warlist")
+MACRO_CONFIG_INT(ClDiscordWebhookCount, fx_discord_webhook_count, 1, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Number of Discord webhooks to use")
+MACRO_CONFIG_STR(ClDiscordWebhookUrls, fx_discord_webhook_urls, 2560, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discord webhook URLs (semicolon separated)")
+MACRO_CONFIG_STR(ClDiscordWebhookNames, fx_discord_webhook_names, 2560, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discord webhook Names (semicolon separated)")
+MACRO_CONFIG_STR(ClDiscordWebhookScheme, fx_discord_webhook_scheme, 128, "w:1;t:1;h:1", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Webhook routing scheme (w=war,t=team,h=helper;numbers=webhook index)")
+
+MACRO_CONFIG_INT(ClShowPets, fx_show_pets, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show pets")
+MACRO_CONFIG_INT(ClPetSpeed, fx_pet_speed, 10, 1, 50, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet movement speed")
+MACRO_CONFIG_INT(ClPetFollowMode, fx_pet_follow_mode, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet follow mode (1=Player, 2=Dummy, 3=Both, 4=Custom)")
+MACRO_CONFIG_INT(ClPetSkinMode, fx_pet_skin_mode, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet skin mode (1=Player, 2=Dummy, 3=Default, 4=Custom)")
+MACRO_CONFIG_INT(ClPetTransitionMode, fx_pet_transition_mode, 1, 1, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet movement transition (1=Linear, 2=EaseIn, 3=EaseOut)")
+MACRO_CONFIG_COL(ClPetColor, fx_pet_color, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet color")
+MACRO_CONFIG_INT(ClPetTransparency, fx_pet_transparency, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet transparency")
+MACRO_CONFIG_INT(ClPetScale, fx_pet_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet scale")
+MACRO_CONFIG_INT(ClPetDebugLine, fx_pet_debug_line, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show debug line to pet target")
+MACRO_CONFIG_COL(ClPetDebugLineColor, fx_pet_debug_line_color, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet debug line color")

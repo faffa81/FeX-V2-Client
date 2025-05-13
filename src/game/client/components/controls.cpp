@@ -184,12 +184,12 @@ int CControls::SnapInput(int *pData)
 	// update player state
 	if(m_pClient->m_Chat.IsActive())
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_CHATTING;
-	else if(m_pClient->m_Menus.IsActive())
+	else if(m_pClient->m_Menus.IsActive() && g_Config.m_ClShowOwnMenuToOthers)
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_IN_MENU;
 	else
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags = PLAYERFLAG_PLAYING;
-
-	if(m_pClient->m_Scoreboard.IsActive())
+		
+	if(m_pClient->m_Scoreboard.IsActive() || g_Config.m_ClPingNameCircle)
 		m_aInputData[g_Config.m_ClDummy].m_PlayerFlags |= PLAYERFLAG_SCOREBOARD;
 
 	if(Client()->ServerCapAnyPlayerFlag() && m_pClient->m_Controls.m_aShowHookColl[g_Config.m_ClDummy])

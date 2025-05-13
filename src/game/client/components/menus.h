@@ -698,6 +698,25 @@ public:
     }
     void RenderFadeLoadingScreen();
 
+	int m_SelectedOption;
+	bool m_LoadingOptionsActive;
+	bool m_FontSelectionMode;
+	struct SLoadingScreenOption 
+	{
+		const char *m_pName;
+		char *m_pConfig;
+		int m_Min;
+		int m_Max;
+		bool m_IsCheckbox;
+		
+		SLoadingScreenOption(const char *pName, char *pConfig, int Min, int Max, bool IsCheckbox) :
+			m_pName(pName), m_pConfig(pConfig), m_Min(Min), m_Max(Max), m_IsCheckbox(IsCheckbox) {}
+
+		SLoadingScreenOption(const char *pName, int *pConfig, int Min, int Max, bool IsCheckbox) :
+			m_pName(pName), m_pConfig((char*)pConfig), m_Min(Min), m_Max(Max), m_IsCheckbox(IsCheckbox) {}
+	};
+    std::vector<SLoadingScreenOption> m_vLoadingScreenOptions;
+
 	virtual int Sizeof() const override { return sizeof(*this); }
 
 	void RenderLoading(const char *pCaption, const char *pContent, int IncreaseCounter);

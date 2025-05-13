@@ -48,6 +48,8 @@ void CWarList::OnConsoleInit()
 		io_close(File);
 		Console()->ExecuteFile(WARLIST_FILE);
 	}
+
+    ParseWebhookUrls();
 }
 
 // In-game war Commands
@@ -163,100 +165,114 @@ void CWarList::ConDelMute(IConsole::IResult *pResult, void *pUserData)
 
 void CWarList::AddWarEntryInGame(int WarType, const char *pName, const char *pReason, bool IsClan)
 {
-	if(str_comp(pName, "") == 0)
-		return;
-	if(WarType >= (int)m_WarTypes.size())
-		return;
+    if(str_comp(pName, "") == 0)
+        return;
+    if(WarType >= (int)m_WarTypes.size())
+        return;
 
-	CWarType *pWarType = m_WarTypes[WarType];
-	CWarEntry Entry(pWarType);
-	str_copy(Entry.m_aReason, pReason);
-	char aBuf[128];
+    CWarType *pWarType = m_WarTypes[WarType];
+    CWarEntry Entry(pWarType);
+    str_copy(Entry.m_aReason, pReason);
+    char aBuf[128];
 
-	if(IsClan)
-	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
-		{
-			if(!GameClient()->m_aClients[i].m_Active)
-				continue;
-			// Found user
-			if(str_comp(GameClient()->m_aClients[i].m_aName, pName) == 0)
-			{
-				if(str_comp(GameClient()->m_aClients[i].m_aClan, "") != 0)
-				{
-					str_format(aBuf, sizeof(aBuf), "added \"%s's\" clan to '%s' list", pName, pWarType->m_aWarName);
-					str_copy(Entry.m_aClan, GameClient()->m_aClients[i].m_aClan);
-				}
-				else
-				{
-					str_format(aBuf, sizeof(aBuf), "No clan found for user \"%s\"", pName);
-					break;
-				}
-			}
-		}
-	}
-	else
-	{
-		str_copy(Entry.m_aName, pName);
-		str_format(aBuf, sizeof(aBuf), "added \"%s\" to '%s' list ", pName, pWarType->m_aWarName);
+    if(IsClan)
+    {
+        for(int i = 0; i < MAX_CLIENTS; ++i)
+        {
+            if(!GameClient()->m_aClients[i].m_Active)
+                continue;
+            // Found user
+            if(str_comp(GameClient()->m_aClients[i].m_aName, pName) == 0)
+            {
+                if(str_comp(GameClient()->m_aClients[i].m_aClan, "") != 0)
+                {
+                    str_format(aBuf, sizeof(aBuf), "added \"%s's\" clan to '%s' list", pName, pWarType->m_aWarName);
+                    str_copy(Entry.m_aClan, GameClient()->m_aClients[i].m_aClan);
+                }
+                else
+                {
+                    str_format(aBuf, sizeof(aBuf), "No clan found for user \"%s\"", pName);
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        str_copy(Entry.m_aName, pName);
+        str_format(aBuf, sizeof(aBuf), "added \"%s\" to '%s' list", pName, pWarType->m_aWarName);
 
-		GameClient()->m_Fex.UnTempWar(pName, true);
-		GameClient()->m_Fex.UnTempHelper(pName, true);
-	}
-	if(!g_Config.m_ClWarListAllowDuplicates)
-		RemoveWarEntryDuplicates(Entry.m_aName, Entry.m_aClan);
+        GameClient()->m_Fex.UnTempWar(pName, true);
+        GameClient()->m_Fex.UnTempHelper(pName, true);
+    }
+    if(!g_Config.m_ClWarListAllowDuplicates)
+        RemoveWarEntryDuplicates(Entry.m_aName, Entry.m_aClan);
 
-	GameClient()->aMessage(aBuf);
+    GameClient()->aMessage(aBuf);
+    AddWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_aReason, Entry.m_pWarType->m_aWarName);
 
-	AddWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_aReason, Entry.m_pWarType->m_aWarName);
-	// if(str_comp(Entry.m_aClan, "") != 0 || str_comp(Entry.m_aName, "") != 0)
-	//	m_WarEntries.push_back(Entry);
+    if(IsClan)
+    {
+        SendDiscordLogAsync(Client()->PlayerName(), Entry.m_pWarType->m_aWarName, "", Entry.m_aClan);
+    }
+    else
+    {
+        SendDiscordLogAsync(Client()->PlayerName(), Entry.m_pWarType->m_aWarName, pName, "");
+    }
 }
 
 void CWarList::RemoveWarEntryInGame(int WarType, const char *pName, bool IsClan)
 {
-	if(!str_comp(pName, ""))
-		return;
+    if(!str_comp(pName, ""))
+        return;
+    if(WarType >= (int)m_WarTypes.size())
+        return;
 
-	if(WarType >= (int)m_WarTypes.size())
-		return;
+    CWarType *pWarType = m_WarTypes[WarType];
+    CWarEntry Entry(pWarType);
+    char aBuf[128];
 
-	CWarType *pWarType = m_WarTypes[WarType];
-	CWarEntry Entry(pWarType);
-	char aBuf[128];
+    if(IsClan)
+    {
+        for(int i = 0; i < MAX_CLIENTS; ++i)
+        {
+            if(!GameClient()->m_aClients[i].m_Active)
+                continue;
+            // Found user
+            if(str_comp(GameClient()->m_aClients[i].m_aName, pName) == 0)
+            {
+                if(str_comp(GameClient()->m_aClients[i].m_aClan, "") != 0)
+                {
+                    str_format(aBuf, sizeof(aBuf), "removed \"%s's\" clan from the %s list", pName, pWarType->m_aWarName);
+                    str_copy(Entry.m_aClan, GameClient()->m_aClients[i].m_aClan);
+                    break;
+                }
+                else
+                {
+                    str_format(aBuf, sizeof(aBuf), "No clan found for user \"%s\"", pName);
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        str_copy(Entry.m_aName, pName);
+        str_format(aBuf, sizeof(aBuf), "removed \"%s\" from the %s list", pName, pWarType->m_aWarName);
+        GameClient()->m_Fex.UnTempWar(pName, true);
+        GameClient()->m_Fex.UnTempHelper(pName, true);
+    }
+    GameClient()->aMessage(aBuf);
+    RemoveWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_pWarType->m_aWarName);
 
-	if(IsClan)
-	{
-		for(int i = 0; i < MAX_CLIENTS; ++i)
-		{
-			if(!GameClient()->m_aClients[i].m_Active)
-				continue;
-			// Found user
-			if(str_comp(GameClient()->m_aClients[i].m_aName, pName) == 0)
-			{
-				if(str_comp(GameClient()->m_aClients[i].m_aClan, "") != 0)
-				{
-					str_format(aBuf, sizeof(aBuf), "removed \"%s's\" clan from the %s list", pName, pWarType->m_aWarName);
-					str_copy(Entry.m_aClan, GameClient()->m_aClients[i].m_aClan);
-					break;
-				}
-				else
-				{
-					str_format(aBuf, sizeof(aBuf), "No clan found for user \"%s\"", pName);
-					break;
-				}
-			}
-		}
-	}
-	else
-	{
-		str_copy(Entry.m_aName, pName);
-		str_format(aBuf, sizeof(aBuf), "removed \"%s\" from the %s list", pName, pWarType->m_aWarName);
-		GameClient()->m_Fex.UnTempWar(pName, true);
-		GameClient()->m_Fex.UnTempHelper(pName, true);
-	}
-	GameClient()->aMessage(aBuf);
-	RemoveWarEntry(Entry.m_aName, Entry.m_aClan, Entry.m_pWarType->m_aWarName);
+    if(IsClan)
+    {
+        SendDiscordLogAsyncRemoval(Client()->PlayerName(), Entry.m_pWarType->m_aWarName, "", Entry.m_aClan);
+    }
+    else
+    {
+        SendDiscordLogAsyncRemoval(Client()->PlayerName(), Entry.m_pWarType->m_aWarName, pName, "");
+    }
 }
 
 void CWarList::AddMuteEntry(const char *pName)
@@ -430,26 +446,26 @@ void CWarList::RemoveWarEntry(CWarEntry *Entry)
 
 void CWarList::RemoveWarType(const char *pType)
 {
-	CWarType Type(pType);
+    if(str_comp(pType, "") == 0)
+        return;
 
-	auto it = std::find_if(m_WarTypes.begin(), m_WarTypes.end(),
-		[&Type](CWarType *warTypePtr) { return *warTypePtr == Type; });
-	if(it != m_WarTypes.end())
-	{
-		// Don't remove default war types
-		if(!(*it)->m_Removable)
-			return;
+    for(auto it = m_WarTypes.begin(); it != m_WarTypes.end(); ++it)
+    {
+        if(str_comp((*it)->m_aWarName, pType) == 0)
+        {
+            if(!(*it)->m_Removable)
+            {
+                GameClient()->aMessage("War type is not removable.");
+                return;
+            }
+            m_WarTypes.erase(it);
 
-		// Find all war entries and set them to None if they are using this type
-		for(CWarEntry &Entry : m_WarEntries)
-		{
-			if(*Entry.m_pWarType == **it)
-			{
-				Entry.m_pWarType = m_pWarTypeNone;
-			}
-		}
-		m_WarTypes.erase(it);
-	}
+            char aBuf[128];
+            str_format(aBuf, sizeof(aBuf), "removed war type \"%s\"", pType);
+            GameClient()->aMessage(aBuf);
+            return;
+        }
+    }
 }
 
 int CWarList::FindWarTypeWithName(const char *pName)
@@ -619,6 +635,77 @@ void CWarList::UpdateWarPlayers()
 	}
 }
 
+void CWarList::UpdateClientWarStates(int ClientId) 
+{
+    if(ClientId < 0 || ClientId >= MAX_CLIENTS)
+        return;
+
+    const int64_t Now = time_get();
+    const int64_t UPDATE_INTERVAL = time_freq() * 0.5f;
+    
+    if(!m_aStatesDirty[ClientId] && Now - m_aLastUpdateTime[ClientId] < UPDATE_INTERVAL)
+        return;
+
+    bool WasPrevWar = GameClient()->m_aClients[ClientId].m_IsWar;
+    bool WasPrevTeam = GameClient()->m_aClients[ClientId].m_IsTeam;
+    bool WasPrevHelper = GameClient()->m_aClients[ClientId].m_IsHelper;
+
+    // Reset states
+    GameClient()->m_aClients[ClientId].m_IsWar = false;
+    GameClient()->m_aClients[ClientId].m_IsTeam = false;
+    GameClient()->m_aClients[ClientId].m_IsHelper = false;
+
+    // Check all war entries
+    for(const auto &Entry : m_WarEntries)
+    {
+        // Check name matches
+        if(Entry.m_aName[0] && !str_comp(Entry.m_aName, GameClient()->m_aClients[ClientId].m_aName))
+        {
+            if(!str_comp(Entry.m_pWarType->m_aWarName, "enemy"))
+                GameClient()->m_aClients[ClientId].m_IsWar = true;
+            else if(!str_comp(Entry.m_pWarType->m_aWarName, "helper"))
+                GameClient()->m_aClients[ClientId].m_IsHelper = true;
+            else if(!str_comp(Entry.m_pWarType->m_aWarName, "team"))
+                GameClient()->m_aClients[ClientId].m_IsTeam = true;
+        }
+
+        // Check clan matches 
+        if(Entry.m_aClan[0] && !str_comp(Entry.m_aClan, GameClient()->m_aClients[ClientId].m_aClan))
+        {
+            if(!str_comp(Entry.m_pWarType->m_aWarName, "enemy"))
+                GameClient()->m_aClients[ClientId].m_IsWar = true;
+            else if(!str_comp(Entry.m_pWarType->m_aWarName, "helper"))
+                GameClient()->m_aClients[ClientId].m_IsHelper = true;
+            else if(!str_comp(Entry.m_pWarType->m_aWarName, "team"))
+                GameClient()->m_aClients[ClientId].m_IsTeam = true;
+        }
+    }
+
+    m_aStatesDirty[ClientId] = false;
+    m_aLastUpdateTime[ClientId] = Now;
+
+    if(WasPrevWar != GameClient()->m_aClients[ClientId].m_IsWar ||
+       WasPrevTeam != GameClient()->m_aClients[ClientId].m_IsTeam ||
+       WasPrevHelper != GameClient()->m_aClients[ClientId].m_IsHelper)
+    {
+        GameClient()->OnClientStateChange(ClientId);
+    }
+}
+
+void CWarList::MarkClientStateDirty(int ClientId)
+{
+    if(ClientId >= 0 && ClientId < MAX_CLIENTS)
+        m_aStatesDirty[ClientId] = true;
+}
+
+// Call this when adding/removing war entries
+void CWarList::OnWarEntryChange()
+{
+    // Mark all clients as needing an update
+    for(int i = 0; i < MAX_CLIENTS; i++)
+        m_aStatesDirty[i] = true;
+}
+
 CWarList::~CWarList()
 {
 	for(CWarType *WarType : m_WarTypes)
@@ -727,4 +814,414 @@ void CWarList::ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserDat
 	pThis->m_WarlistFile = {};
 	if(Failed)
 		dbg_msg("config", "ERROR: writing to %s failed", WARLIST_FILE);
+}
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <curl/curl.h>
+
+void CWarList::ParseWebhookUrls()
+{
+    m_Webhooks.clear();
+    m_Webhooks.resize(g_Config.m_ClDiscordWebhookCount);
+
+    char aUrls[2560];
+    str_copy(aUrls, g_Config.m_ClDiscordWebhookUrls);
+    
+    char *pUrl = aUrls;
+    char *pSavePtr = nullptr;
+    int WebhookIndex = 0;
+    
+    // Split by semicolon
+    pUrl = strtok_r(pUrl, ";", &pSavePtr);
+    while(pUrl && WebhookIndex < g_Config.m_ClDiscordWebhookCount)
+    {
+        str_copy(m_Webhooks[WebhookIndex].m_aUrl, pUrl, sizeof(WebhookInfo::m_aUrl));
+        m_Webhooks[WebhookIndex].m_Valid = true;
+        
+        WebhookIndex++;
+        pUrl = strtok_r(nullptr, ";", &pSavePtr);
+    }
+
+    // Debug output
+    dbg_msg("warlist", "Parsed %d webhook URLs:", WebhookIndex);
+    for(int i = 0; i < WebhookIndex; i++)
+    {
+        if(m_Webhooks[i].m_Valid)
+            dbg_msg("warlist", "Webhook %d: %s", i+1, m_Webhooks[i].m_aUrl);
+    }
+}
+
+const char* CWarList::GetWebhookUrl(int Index)
+{
+    if(Index < 0 || Index >= (int)m_Webhooks.size())
+    {
+        dbg_msg("warlist", "Invalid webhook index: %d", Index);
+        return nullptr;
+    }
+
+    if(!m_Webhooks[Index].m_Valid || !m_Webhooks[Index].m_aUrl[0])
+    {
+        dbg_msg("warlist", "No valid webhook URL at index %d", Index);
+        return nullptr;
+    }
+
+    dbg_msg("warlist", "Getting webhook URL for index %d: %s", Index, m_Webhooks[Index].m_aUrl);
+    return m_Webhooks[Index].m_aUrl;
+}
+
+void CWarList::SaveWebhookUrls()
+{
+    char aUrls[2560] = {0};
+    int Offset = 0;
+    
+    for(size_t i = 0; i < m_Webhooks.size(); i++)
+    {
+        if(m_Webhooks[i].m_Valid)
+        {
+            if(Offset > 0)
+                str_append(aUrls, ";", sizeof(aUrls));
+                
+            str_append(aUrls, m_Webhooks[i].m_aUrl, sizeof(aUrls));
+        }
+    }
+    
+    str_copy(g_Config.m_ClDiscordWebhookUrls, aUrls);
+}
+
+static int ColorToInt(const ColorRGBA &Color)
+{
+    int r = static_cast<int>(Color.r * 255);
+    int g = static_cast<int>(Color.g * 255);
+    int b = static_cast<int>(Color.b * 255);
+    return (r << 16) | (g << 8) | b;
+}
+
+#include <ctime>
+
+void getCurrentLocalTime(char *pBuffer, size_t bufferSize)
+{
+    time_t now = time(nullptr);
+#if defined(_WIN32) || defined(_WIN64)
+    struct tm localTime;
+    if(localtime_s(&localTime, &now) != 0)
+    {
+        strncpy(pBuffer, "Unknown Time", bufferSize);
+        return;
+    }
+    strftime(pBuffer, bufferSize, "%Y-%m-%d %H:%M:%S", &localTime);
+#else
+    struct tm localTime;
+    if(localtime_r(&now, &localTime) == nullptr)
+    {
+        strncpy(pBuffer, "Unknown Time", bufferSize);
+        return;
+    }
+    strftime(pBuffer, bufferSize, "%Y-%m-%d %H:%M:%S", &localTime);
+#endif
+}
+
+
+void CWarList::SendDiscordLog(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan)
+{
+    if(!g_Config.m_ClDiscordWebhooks)
+        return;
+
+    const char* pWebhookUrl = nullptr;
+    
+    // First try to find webhook from scheme
+    char aScheme[128];
+    str_copy(aScheme, g_Config.m_ClDiscordWebhookScheme);
+    char *pToken = strtok(aScheme, ";");
+    
+    while(pToken)
+    {
+        char aType[32] = {0};
+        int WebhookIndex = 0;
+        
+        if(sscanf(pToken, "%31[^:]:%d", aType, &WebhookIndex) == 2)
+        {
+            if(str_comp(aType, pWarType) == 0)
+            {
+                pWebhookUrl = GetWebhookUrl(WebhookIndex - 1);
+                break;
+            }
+            else if(aType[0] == pWarType[0] && !pWebhookUrl)
+            {
+                pWebhookUrl = GetWebhookUrl(WebhookIndex - 1);
+            }
+        }
+        pToken = strtok(NULL, ";");
+    }
+
+    // Fallback to first webhook if none found
+    if(!pWebhookUrl || !pWebhookUrl[0])
+        pWebhookUrl = GetWebhookUrl(0);
+        
+    // Check if we have a valid URL
+    if(!pWebhookUrl || !pWebhookUrl[0] || str_length(pWebhookUrl) < 5)
+    {
+        dbg_msg("warlist", "No valid webhook URL found");
+        return;
+    }
+
+    // Verify webhook URL starts with https://
+    if(str_comp_num(pWebhookUrl, "https://", 8) != 0)
+    {
+        dbg_msg("warlist", "Invalid webhook URL format");
+        return;
+    }
+
+    // Get color for war type
+    int embedColor = 0xffffff;
+    for(auto &pType : m_WarTypes)
+    {
+        if(str_comp(pType->m_aWarName, pWarType) == 0)
+        {
+            embedColor = ColorToInt(pType->m_Color);
+            break;
+        }
+    }
+
+    char timeStr[100];
+    getCurrentLocalTime(timeStr, sizeof(timeStr));
+
+    const char *extraFieldName = (pClan && pClan[0] != '\0') ? "Clan" : "Target";
+    const char *extraFieldValue = (pClan && pClan[0] != '\0') ? pClan : pTarget;
+
+    // Build JSON payload
+    char jsonPayload[2048];
+    int written = snprintf(
+        jsonPayload, sizeof(jsonPayload),
+        "{"
+        "  \"username\": \"FeX Warlog\","
+        "  \"embeds\": ["
+        "    {"
+        "      \"title\": \"War Log Addition\","
+        "      \"color\": %d,"
+        "      \"fields\": ["
+        "        { \"name\": \"Actor\", \"value\": \"%s\", \"inline\": true },"
+        "        { \"name\": \"War Type\", \"value\": \"%s\", \"inline\": true },"
+        "        { \"name\": \"%s\", \"value\": \"%s\", \"inline\": true }"
+        "      ],"
+        "      \"footer\": { \"text\": \"%s\" }"
+        "    }"
+        "  ]"
+        "}",
+        embedColor, pActor, pWarType, extraFieldName, extraFieldValue, timeStr
+    );
+
+    if(written < 0 || written >= (int)sizeof(jsonPayload))
+    {
+        dbg_msg("warlist", "JSON payload formatting error");
+        return;
+    }
+
+    // Send webhook
+    CURL *curl = curl_easy_init();
+    if(curl)
+    {
+        curl_easy_setopt(curl, CURLOPT_URL, pWebhookUrl);
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonPayload);
+
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        // Add timeout
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+        
+        // Enable debug messages
+        dbg_msg("warlist", "Sending webhook to: %s", pWebhookUrl);
+        dbg_msg("warlist", "Payload: %s", jsonPayload);
+
+        CURLcode res = curl_easy_perform(curl);
+        if(res != CURLE_OK)
+        {
+            dbg_msg("warlist", "Webhook failed: %s", curl_easy_strerror(res));
+        }
+        else
+        {
+            long httpCode = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+            if(httpCode != 204 && httpCode != 200)
+                dbg_msg("warlist", "Webhook failed with HTTP code: %d", httpCode);
+            else
+                dbg_msg("warlist", "Webhook sent successfully");
+        }
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+    else
+    {
+        dbg_msg("warlist", "Failed to initialize CURL");
+    }
+}
+void CWarList::SendDiscordLogRemoval(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan)
+{
+    if(!g_Config.m_ClDiscordWebhooks)
+        return;
+
+    const char* pWebhookUrl = nullptr;
+    
+    // First try to find webhook from scheme
+    char aScheme[128];
+    str_copy(aScheme, g_Config.m_ClDiscordWebhookScheme);
+    char *pToken = strtok(aScheme, ";");
+    
+    while(pToken)
+    {
+        char aType[32] = {0};
+        int WebhookIndex = 0;
+        
+        if(sscanf(pToken, "%31[^:]:%d", aType, &WebhookIndex) == 2)
+        {
+            if(str_comp(aType, pWarType) == 0)
+            {
+                pWebhookUrl = GetWebhookUrl(WebhookIndex - 1);
+                break;
+            }
+            else if(aType[0] == pWarType[0] && !pWebhookUrl)
+            {
+                pWebhookUrl = GetWebhookUrl(WebhookIndex - 1);
+            }
+        }
+        pToken = strtok(NULL, ";");
+    }
+
+    // Fallback to first webhook if none found
+    if(!pWebhookUrl || !pWebhookUrl[0])
+        pWebhookUrl = GetWebhookUrl(0);
+        
+    // Check if we have a valid URL
+    if(!pWebhookUrl || !pWebhookUrl[0] || str_length(pWebhookUrl) < 5)
+    {
+        dbg_msg("warlist", "No valid webhook URL found");
+        return;
+    }
+
+    // Verify webhook URL starts with https://
+    if(str_comp_num(pWebhookUrl, "https://", 8) != 0)
+    {
+        dbg_msg("warlist", "Invalid webhook URL format");
+        return;
+    }
+
+    // Get color for war type
+    int embedColor = 0xffffff;
+    for(auto &pType : m_WarTypes)
+    {
+        if(str_comp(pType->m_aWarName, pWarType) == 0)
+        {
+            embedColor = ColorToInt(pType->m_Color);
+            break;
+        }
+    }
+
+    char timeStr[100];
+    getCurrentLocalTime(timeStr, sizeof(timeStr));
+
+    const char *extraFieldName = (pClan && pClan[0] != '\0') ? "Clan" : "Target";
+    const char *extraFieldValue = (pClan && pClan[0] != '\0') ? pClan : pTarget;
+
+    // Build JSON payload
+    char jsonPayload[2048];
+    int written = snprintf(
+        jsonPayload, sizeof(jsonPayload),
+        "{"
+        "  \"username\": \"FeX Warlog\","
+        "  \"embeds\": ["
+        "    {"
+        "      \"title\": \"War Log Deletion\","
+        "      \"color\": %d,"
+        "      \"fields\": ["
+        "        { \"name\": \"Actor\", \"value\": \"%s\", \"inline\": true },"
+        "        { \"name\": \"War Type\", \"value\": \"%s\", \"inline\": true },"
+        "        { \"name\": \"%s\", \"value\": \"%s\", \"inline\": true }"
+        "      ],"
+        "      \"footer\": { \"text\": \"%s\" }"
+        "    }"
+        "  ]"
+        "}",
+        embedColor, pActor, pWarType, extraFieldName, extraFieldValue, timeStr
+    );
+
+    if(written < 0 || written >= (int)sizeof(jsonPayload))
+    {
+        dbg_msg("warlist", "JSON payload formatting error");
+        return;
+    }
+
+    // Send webhook
+    CURL *curl = curl_easy_init();
+    if(curl)
+    {
+        curl_easy_setopt(curl, CURLOPT_URL, pWebhookUrl);
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonPayload);
+
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        // Add timeout
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+        
+        // Enable debug messages
+        dbg_msg("warlist", "Sending webhook to: %s", pWebhookUrl);
+        dbg_msg("warlist", "Payload: %s", jsonPayload);
+
+        CURLcode res = curl_easy_perform(curl);
+        if(res != CURLE_OK)
+        {
+            dbg_msg("warlist", "Webhook failed: %s", curl_easy_strerror(res));
+        }
+        else
+        {
+            long httpCode = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+            if(httpCode != 204 && httpCode != 200)
+                dbg_msg("warlist", "Webhook failed with HTTP code: %d", httpCode);
+            else
+                dbg_msg("warlist", "Webhook sent successfully");
+        }
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+    else
+    {
+        dbg_msg("warlist", "Failed to initialize CURL");
+    }
+}
+
+#include <thread>
+#include <string>
+
+void CWarList::SendDiscordLogAsync(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan)
+{
+    std::string sActor(pActor);
+    std::string sWarType(pWarType);
+    std::string sTarget(pTarget);
+    std::string sClan(pClan);
+
+    std::thread([this, sActor, sWarType, sTarget, sClan]() {
+        this->SendDiscordLog(sActor.c_str(), sWarType.c_str(), sTarget.c_str(), sClan.c_str());
+    }).detach();
+}
+
+void CWarList::SendDiscordLogAsyncRemoval(const char *pActor, const char *pWarType, const char *pTarget, const char *pClan)
+{
+    std::string sActor(pActor);
+    std::string sWarType(pWarType);
+    std::string sTarget(pTarget);
+    std::string sClan(pClan);
+
+    std::thread([this, sActor, sWarType, sTarget, sClan]() {
+        this->SendDiscordLogRemoval(sActor.c_str(), sWarType.c_str(), sTarget.c_str(), sClan.c_str());
+    }).detach();
 }

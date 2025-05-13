@@ -361,6 +361,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClanOffset = NameOffset + NameLength + 5.0f;
 	const float ClanLength = CountryOffset - ClanOffset - 5.0f;
 
+	const float NameFontSize = 8.0f + g_Config.m_ClScoreboardScale * 0.2f;
+
 	// render headlines
 	const float HeadlineFontsize = 22.0f;
 	CUIRect Headline;
@@ -381,6 +383,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 	char aBuf[64];
 	int MaxTeamSize = Config()->m_SvMaxTeamSize;
+
+	float Alpha = 1.0f;
 
 	for(int RenderDead = 0; RenderDead < 2; RenderDead++)
 	{
@@ -571,104 +575,171 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 			}
 
-			// name
+			for(int ci = 0; ci < MAX_CLIENTS; ++ci)
+			{
+				GameClient()->m_WarList.UpdateClientWarStates(i);
+			}
+
+			static constexpr float ICON_SPACING_SMALL = 3.0f;
+
 			{
 				CTextCursor Cursor;
-				TextRender()->SetCursor(&Cursor, NameOffset, Row.y + (Row.h - FontSize) / 2.0f, FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
-				Cursor.m_LineWidth = NameLength;
-				if(ClientData.m_AuthLevel)
+				float ICON_SPACING = ICON_SPACING_SMALL;
+				float reservedOffset = 0.0f;
+				float baseIconPosX = NameOffset;
+
+				if(g_Config.m_ClShowFeXIcon && GameClient()->m_aClients[pInfo->m_ClientId].m_IsFeXClient)
 				{
-					TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClAuthedPlayerColor)));
+					Graphics()->BlendNormal();
+					Graphics()->TextureSet(g_pData->m_aImages[IMAGE_FEX_ICON].m_Id);
+					Graphics()->QuadsBegin();
+					Graphics()->SetColor(1.0f, 1.0f, 1.0f, Alpha);
+					IGraphics::CQuadItem FexQuad(baseIconPosX, Row.y + IconRowY, IconSize, IconSize);
+					Graphics()->QuadsDrawTL(&FexQuad, 1);
+					Graphics()->QuadsEnd();
+					baseIconPosX += IconSize + ICON_SPACING;
+					reservedOffset += IconSize + ICON_SPACING;
 				}
+
+				// Client ID if enabled
 				if(g_Config.m_ClShowIds)
 				{
 					char aClientId[16];
 					GameClient()->FormatClientId(pInfo->m_ClientId, aClientId, EClientIdFormat::INDENT_AUTO);
+					TextRender()->SetCursor(&Cursor, baseIconPosX, Row.y + (Row.h - FontSize) / 2.0f, 
+						FontSize, TEXTFLAG_RENDER);
 					TextRender()->TextEx(&Cursor, aClientId);
+					reservedOffset += TextRender()->TextWidth(FontSize, aClientId) + ICON_SPACING;
+					baseIconPosX += TextRender()->TextWidth(FontSize, aClientId) + ICON_SPACING;
 				}
+
+				// Mute icon
 				if(GameClient()->m_aClients[pInfo->m_ClientId].m_IsMute)
 				{
-					ColorRGBA Color = color_cast<ColorRGBA, ColorHSLA>(ColorHSLA(g_Config.m_ClMutedColor));
-					int IdOffest = IconRowX * -1 + 2;
-					if(g_Config.m_ClShowIds)
-					{
-						if(GameClient()->m_Snap.m_HighestClientId >= 10)
-						{
-							IdOffest = 3;
-							TextRender()->TextEx(&Cursor, "     ");
-						}
-						else
-						{
-							IdOffest = -15;
-							TextRender()->TextEx(&Cursor, "    ");
-						}
-					}
-					else
-						TextRender()->TextEx(&Cursor, "     ");
-
 					Graphics()->BlendNormal();
 					Graphics()->TextureSet(g_pData->m_aImages[IMAGE_MUTED_ICON].m_Id);
 					Graphics()->QuadsBegin();
-					Graphics()->SetColor(Color);
-					IGraphics::CQuadItem QuadItem(NameOffset + IconRowX + IdOffest, Row.y + IconRowY, IconSize, IconSize);
-					Graphics()->QuadsDrawTL(&QuadItem, 2);
+					Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClMutedColor)));
+					IGraphics::CQuadItem QuadItem(baseIconPosX, Row.y + IconRowY, IconSize, IconSize);
+					Graphics()->QuadsDrawTL(&QuadItem, 1);
 					Graphics()->QuadsEnd();
+					baseIconPosX += IconSize + ICON_SPACING;
+					reservedOffset += IconSize + ICON_SPACING;
 				}
 
-				float Alpha = 1.0f;
-
-				if(g_Config.m_ClSpectatePrefix && paused)
+				// Spectator prefix
+				if(g_Config.m_ClSpectatePrefix && GameClient()->m_aClients[pInfo->m_ClientId].m_Spec)
 				{
+					TextRender()->SetCursor(&Cursor, baseIconPosX, Row.y + (Row.h - FontSize) / 2.0f,
+						FontSize, TEXTFLAG_RENDER);
 					TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClSpecColor)));
-					//TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
-					//TextRender()->TextEx(&Cursor, FontIcons::FONT_ICON_EYE);
 					TextRender()->TextEx(&Cursor, g_Config.m_ClSpecPrefix);
-					//TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
-					TextRender()->TextColor(1.f, 1.f, 1.f, Alpha);
-
+					float SpecWidth = TextRender()->TextWidth(FontSize, g_Config.m_ClSpecPrefix);
+					baseIconPosX += SpecWidth + ICON_SPACING;
+					reservedOffset += SpecWidth + ICON_SPACING;
 				}
 
-				if(g_Config.m_ClDoFriendColors && ClientData.m_Friend)
-					TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendColor).WithAlpha(Alpha)));
-
-				if(pInfo->m_ClientId >= 0 && g_Config.m_ClWarList && g_Config.m_ClWarListScoreboard)
+				// War icons
+				if(g_Config.m_ClEntryIcons && pInfo->m_ClientId >= 0 && g_Config.m_ClWarList && g_Config.m_ClWarListScoreboard)
 				{
-					if(GameClient()->m_Fex.m_TempPlayers[pInfo->m_ClientId].IsTempWar)
-						TextRender()->TextColor(GameClient()->m_WarList.m_WarTypes[1]->m_Color.WithAlpha(Alpha));
-					else if(GameClient()->m_Fex.m_TempPlayers[pInfo->m_ClientId].IsTempHelper)
-						TextRender()->TextColor(GameClient()->m_WarList.m_WarTypes[3]->m_Color.WithAlpha(Alpha));
-					else if(GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
-						TextRender()->TextColor(GameClient()->m_WarList.GetNameplateColor(pInfo->m_ClientId).WithAlpha(Alpha));
+					float warOffset = 0.0f;
+					
+					auto RenderWarIcon = [&](int ImageId, const ColorRGBA& Color) {
+						Graphics()->BlendNormal();
+						Graphics()->TextureSet(g_pData->m_aImages[ImageId].m_Id);
+						Graphics()->QuadsBegin();
+						Graphics()->SetColor(Color.WithAlpha(Alpha));
+						IGraphics::CQuadItem IconQuad(baseIconPosX + warOffset, Row.y + IconRowY, IconSize, IconSize);
+						Graphics()->QuadsDrawTL(&IconQuad, 1);
+						Graphics()->QuadsEnd();
+						warOffset += IconSize + ICON_SPACING;
+					};
+
+					if(GameClient()->m_aClients[pInfo->m_ClientId].m_IsWar)
+					{
+						RenderWarIcon(IMAGE_SWORD_ICON, GameClient()->m_WarList.m_WarTypes[1]->m_Color);
+						if(GameClient()->m_WarList.GetClanWar(pInfo->m_ClientId))
+							RenderWarIcon(IMAGE_CLAN_ICON, GameClient()->m_WarList.GetClanColor(pInfo->m_ClientId));
+					}
+					else if(GameClient()->m_aClients[pInfo->m_ClientId].m_IsHelper)
+					{
+						RenderWarIcon(IMAGE_SWORD_ICON, GameClient()->m_WarList.m_WarTypes[3]->m_Color);
+						if(GameClient()->m_WarList.GetClanWar(pInfo->m_ClientId))
+							RenderWarIcon(IMAGE_CLAN_ICON, GameClient()->m_WarList.GetClanColor(pInfo->m_ClientId));
+					}
+					else if(GameClient()->m_aClients[pInfo->m_ClientId].m_IsTeam)
+					{
+						RenderWarIcon(IMAGE_TEAM_ICON, GameClient()->m_WarList.GetNameplateColor(pInfo->m_ClientId));
+						if(GameClient()->m_WarList.GetClanWar(pInfo->m_ClientId))
+							RenderWarIcon(IMAGE_CLAN_ICON, GameClient()->m_WarList.GetClanColor(pInfo->m_ClientId));
+					}
+					else if(GameClient()->m_WarList.GetClanWar(pInfo->m_ClientId))
+					{
+						RenderWarIcon(IMAGE_CLAN_ICON, GameClient()->m_WarList.GetClanColor(pInfo->m_ClientId));
+					}
+					
+					reservedOffset += warOffset;
 				}
-				else
-					TextRender()->TextColor(1.f, 1.f, 1.f, Alpha);
 
-				TextRender()->TextEx(&Cursor, ClientData.m_aName);
-
-				// ready / watching
-				if(Client()->IsSixup() && Client()->m_TranslationContext.m_aClients[pInfo->m_ClientId].m_PlayerFlags7 & protocol7::PLAYERFLAG_READY)
+				// Name
 				{
-					TextRender()->TextColor(0.1f, 1.0f, 0.1f, TextColor.a);
-					TextRender()->TextEx(&Cursor, "✓");
+					float finalNameOffset = NameOffset + reservedOffset;
+					TextRender()->SetCursor(&Cursor, finalNameOffset, Row.y + (Row.h - FontSize) / 2.0f,
+						FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
+					Cursor.m_LineWidth = NameLength - reservedOffset;
+
+					// Set name color based on various conditions
+					if(ClientData.m_AuthLevel)
+						TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClAuthedPlayerColor)));
+					else if(g_Config.m_ClDoFriendColors && ClientData.m_Friend)
+						TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClFriendColor).WithAlpha(Alpha)));
+					else if(pInfo->m_ClientId >= 0 && g_Config.m_ClWarList && g_Config.m_ClWarListScoreboard)
+					{
+						if(GameClient()->m_aClients[pInfo->m_ClientId].m_IsWar)
+							TextRender()->TextColor(GameClient()->m_WarList.m_WarTypes[1]->m_Color.WithAlpha(Alpha));
+						else if(GameClient()->m_aClients[pInfo->m_ClientId].m_IsHelper)
+							TextRender()->TextColor(GameClient()->m_WarList.m_WarTypes[3]->m_Color.WithAlpha(Alpha));
+						else if(GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
+							TextRender()->TextColor(GameClient()->m_WarList.GetNameplateColor(pInfo->m_ClientId).WithAlpha(Alpha));
+						else
+							TextRender()->TextColor(1.f, 1.f, 1.f, Alpha);
+					}
+					else
+						TextRender()->TextColor(1.f, 1.f, 1.f, Alpha);
+
+					TextRender()->TextEx(&Cursor, ClientData.m_aName);
+
+					// Ready check mark
+					if(Client()->IsSixup() && Client()->m_TranslationContext.m_aClients[pInfo->m_ClientId].m_PlayerFlags7 & protocol7::PLAYERFLAG_READY)
+					{
+						TextRender()->TextColor(0.1f, 1.0f, 0.1f, TextColor.a);
+						TextRender()->TextEx(&Cursor, "✓");
+					}
 				}
 			}
 
 			// clan
 			{
-				if(GameClient()->m_aLocalIds[g_Config.m_ClDummy] >= 0 && str_comp(ClientData.m_aClan, GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_aClan) == 0)
+				if(GameClient()->m_aLocalIds[g_Config.m_ClDummy] >= 0 && 
+				str_comp(ClientData.m_aClan, GameClient()->m_aClients[GameClient()->m_aLocalIds[g_Config.m_ClDummy]].m_aClan) == 0)
 					TextRender()->TextColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClSameClanColor)));
 				else
 					TextRender()->TextColor(TextColor);
 
 				// TClient
-				if(pInfo->m_ClientId >= 0 && g_Config.m_ClWarList && g_Config.m_ClWarListScoreboard && GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
+				if(pInfo->m_ClientId >= 0 && g_Config.m_ClWarList && g_Config.m_ClWarListScoreboard && 
+				GameClient()->m_WarList.GetAnyWar(pInfo->m_ClientId))
 					TextRender()->TextColor(GameClient()->m_WarList.GetClanColor(pInfo->m_ClientId));
 
 				CTextCursor Cursor;
-				TextRender()->SetCursor(&Cursor, ClanOffset + (ClanLength - minimum(TextRender()->TextWidth(FontSize, ClientData.m_aClan), ClanLength)) / 2.0f, Row.y + (Row.h - FontSize) / 2.0f, FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
+				TextRender()->SetCursor(&Cursor, ClanOffset + (ClanLength - minimum(TextRender()->TextWidth(FontSize, ClientData.m_aClan), ClanLength)) / 2.0f,
+					Row.y + (Row.h - FontSize) / 2.0f, FontSize, TEXTFLAG_RENDER | TEXTFLAG_ELLIPSIS_AT_END);
 				Cursor.m_LineWidth = ClanLength;
 				TextRender()->TextEx(&Cursor, ClientData.m_aClan);
 			}
+
+
+
 
 			// country flag
 			GameClient()->m_CountryFlags.Render(ClientData.m_Country, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f),

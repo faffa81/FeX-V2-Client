@@ -353,26 +353,21 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 #endif
 	if(str_comp(GameClient()->m_Update.m_aVersionStr, "0") != 0)
 	{
-		// Split VersionUpdate into two halves.
 		// CUIRect ManualButton, AutoButton;
 		// VersionUpdate.VSplitMid(&ManualButton, &AutoButton);
 
 		char aBuf[64];
 		str_format(aBuf, sizeof(aBuf), Localize("FeX v%s is out!"), GameClient()->m_Update.m_aVersionStr);
 
-		// Left button: Manual download.
 		static CButtonContainer s_ManualUpdate;
 		if(DoButton_Menu(&s_ManualUpdate, Localize(aBuf), 0, &VersionUpdate, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
 		{
-			// Open the GitHub release page
 			Client()->ViewLink("https://github.com/faffa81/FeX-V2-Client/releases/latest");
 		}
 
-		// Right button: Auto Update.
 		// static CButtonContainer s_AutoUpdate;
 		// if(DoButton_Menu(&s_AutoUpdate, Localize("Auto Update"), 0, &AutoButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
 		// {
-		// 	// Start the auto updater.
 		// 	GameClient()->m_FexUpdater.InitiateUpdate();
 		// }
 	}

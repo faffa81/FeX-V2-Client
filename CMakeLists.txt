@@ -1467,7 +1467,13 @@ set(EXPECTED_DATA
   fex/fonts/Montserrat-Regular.ttf
   fex/fonts/Nunito-Black.ttf
   fex/fonts/Rubik-Regular.ttf
+  fex/icons/clans.png
+  fex/icons/FeXIcon.png
+  fex/icons/gl.png
   fex/icons/muted_icon.png
+  fex/icons/settings_icon.png
+  fex/icons/sword.png
+  fex/icons/team.png
   fonts/DejaVuSans.ttf
   fonts/Font_Awesome_6_Free-Solid-900.otf
   fonts/GlowSansJ-Compressed-Book.otf
@@ -2391,6 +2397,8 @@ if(CLIENT)
     components/fex/fexfreezekill.h
     components/fex/fexoutlines.cpp
     components/fex/fexoutlines.h
+    components/fex/fexpets.cpp
+    components/fex/fexpets.h
     components/fex/fexplayerindicator.cpp
     components/fex/fexplayerindicator.h
     components/fex/fexskinprofiles.cpp
@@ -2409,6 +2417,9 @@ if(CLIENT)
     components/fex/fx_enums.h
     components/fex/menus_fex.cpp
 
+    ## Translate ##
+    components/fex/translator.cpp
+    components/fex/translator.h
     ## Update ##
     components/fex/update.cpp
     components/fex/update.h

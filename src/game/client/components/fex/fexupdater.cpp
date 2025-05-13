@@ -15,9 +15,8 @@ using std::string;
 // Helper: Build updater URL given the file and release tag.
 static const char *BuildUpdaterUrl(char *pBuf, int BufSize, const char *pFile, const char *pTag)
 {
-    CConsole *m_pConsole;
     str_format(pBuf, BufSize, "https://github.com/faffa81/FeX-V2-Client/releases/download/%s/%s", pTag, pFile);
-    m_pConsole->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX[updater]", pBuf);
+    dbg_msg("FeX[updater]", pBuf);
     return pBuf;
 }
 
@@ -41,9 +40,6 @@ CFexUpdaterFetchTask::CFexUpdaterFetchTask(CFexUpdater *pUpdater, const char *pF
                          ("v" FEX_RELEASE_VERSION);
     BuildUpdaterUrl(m_aUrl, sizeof(m_aUrl), pFile, pTag);
     WriteToFile(m_pUpdater->m_pStorage, GetUpdaterDestPath(m_aDest, sizeof(m_aDest), pFile, pDestPath), -2);
-    // Instead of calling an undefined SetUrl(), we assume CHttpRequest uses the URL from a member.
-    // If such a member does not exist, you may add a setter in your engine.
-    // For now, we ignore m_Uri.
 }
 
 void CFexUpdaterFetchTask::OnProgress()
@@ -96,6 +92,9 @@ void CFexUpdater::SetCurrentState(EFexUpdaterState NewState)
 {
     std::lock_guard<std::mutex> lock(m_Lock);
     m_State = NewState;
+    char aBuf[32];
+    str_format(aBuf, sizeof(aBuf), "%s", NewState);
+    dbg_msg("FeX[updater]", aBuf);
 }
 
 EFexUpdaterState CFexUpdater::GetCurrentState()
@@ -179,15 +178,25 @@ void CFexUpdater::OnRender()
         break;
     case FEX_UPDATER_GOT_MANIFEST:
         {
-#if defined(CONF_FAMILY_WINDOWS)
-            AddFileJob("FeX-5.1-win64.zip", true);
-#elif defined(CONF_PLATFORM_LINUX)
-            AddFileJob("FeX-5.1-linux.zip", true);
-#elif defined(CONF_PLATFORM_MACOS)
-            AddFileJob("FeX-5.1-macos.zip", true);
-#endif
+            char aFileName[256];
+
+            // Ensure we get the latest version from the parsed JSON response.
+            const char *pNextVersion = (m_aLatestVersion[0] != '0') ? m_aLatestVersion : FEX_RELEASE_VERSION;
+
+            str_format(aFileName, sizeof(aFileName), "DDNet-%s-", pNextVersion);
+
+            #if defined(CONF_FAMILY_WINDOWS)
+                str_append(aFileName, "win64.zip", sizeof(aFileName));
+            #elif defined(CONF_PLATFORM_LINUX)
+                str_append(aFileName, "linux", sizeof(aFileName)); // No .zip for Linux
+            #elif defined(CONF_PLATFORM_MACOS)
+                str_append(aFileName, "macos", sizeof(aFileName)); // No .zip for macOS
+            #endif
+
+            AddFileJob(aFileName, true);
             SetCurrentState(FEX_UPDATER_DOWNLOADING);
             m_CurrentJob = m_FileJobs.begin();
+
         }
         break;
     case FEX_UPDATER_DOWNLOADING:
