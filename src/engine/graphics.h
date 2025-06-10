@@ -200,9 +200,9 @@ public:
 	class CTextureHandle
 	{
 		friend class IGraphics;
-		int m_Id;
 
 	public:
+		int m_Id;
 		CTextureHandle() :
 			m_Id(-1)
 		{

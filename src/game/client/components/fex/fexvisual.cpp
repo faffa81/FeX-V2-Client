@@ -21,10 +21,10 @@ T color_lerp(T a, T b, float c)
 
 void CVisual::OnRender()
 {
-	if(!g_Config.m_ClVisualTees && !g_Config.m_ClVisualHook && !g_Config.m_ClVisualWeapon && !g_Config.m_ClVisualCursor)
+	if(!g_Config.m_ClVisualTees && !g_Config.m_ClVisualHook && !g_Config.m_ClVisualWeapon && !g_Config.m_ClVisualCursor && !g_Config.m_ClVisual)
 		return;
 
-	if(g_Config.m_ClVisualModeT == 0 && g_Config.m_ClVisualModeW == 0 && g_Config.m_ClVisualModeH == 0 && g_Config.m_ClVisualModeC == 0)
+	if(g_Config.m_ClVisualModeTee == 0 && g_Config.m_ClVisualModeWeapon == 0 && g_Config.m_ClVisualModeHook == 0 && g_Config.m_ClVisualModeCursor == 0)
 		return;
 
 	static float Time = 0.0f;
@@ -43,7 +43,7 @@ void CVisual::OnRender()
     // Mode: Tees
     // ****************
 
-    switch(g_Config.m_ClVisualModeT)
+    switch(g_Config.m_ClVisualModeTee)
 	{
 	case m_Tees.COLORMODE_RAINBOW:
         ColT = color_cast<ColorRGBA>(ColorHSLA(DefTick, 1.0f, 0.5f));
@@ -73,7 +73,7 @@ void CVisual::OnRender()
     // Mode: Hook
     // ****************
 
-    switch(g_Config.m_ClVisualModeH)
+    switch(g_Config.m_ClVisualModeHook)
 	{
 	case m_Hook.COLORMODE_RAINBOW:
         ColH = color_cast<ColorRGBA>(ColorHSLA(DefTick, 1.0f, 0.5f));
@@ -103,7 +103,7 @@ void CVisual::OnRender()
     // Mode: Weapon
     // ****************
 
-    switch(g_Config.m_ClVisualModeW)
+    switch(g_Config.m_ClVisualModeWeapon)
 	{
 	case m_Weapon.COLORMODE_RAINBOW:
         ColW = color_cast<ColorRGBA>(ColorHSLA(DefTick, 1.0f, 0.5f));
@@ -133,7 +133,7 @@ void CVisual::OnRender()
     // Mode: Cursor
     // ****************
 
-    switch(g_Config.m_ClVisualModeC)
+    switch(g_Config.m_ClVisualModeCursor)
 	{
 	case m_Cursor.COLORMODE_RAINBOW:
         ColC = color_cast<ColorRGBA>(ColorHSLA(DefTick, 1.0f, 0.5f));

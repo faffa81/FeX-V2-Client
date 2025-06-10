@@ -233,7 +233,7 @@ image_clan_icon = Image("clan_icon", "fex/icons/clans.png")
 image_sword_icon = Image("sword_icon", "fex/icons/sword.png")
 image_team_icon = Image("team_icon", "fex/icons/team.png")
 image_goodluck_icon = Image("goodluck_icon", "fex/icons/gl.png")
-image_fex_icon = Image("fex_icon", "fex/icons/FeXIcon.png")
+image_fex_icon = Image("fex_icon", "fex/icons/fex.png")
 
 image_null = Image("null", "")
 image_particles = Image("particles", "particles.png")

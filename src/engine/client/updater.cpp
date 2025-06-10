@@ -8,7 +8,7 @@
 #include <engine/shared/json.h>
 #include <engine/storage.h>
 
-#include <game/version.h>
+#include <game/client/components/fex/fexversion.h>
 
 #include <cstdlib> // system
 
@@ -31,8 +31,16 @@ public:
 
 static const char *GetUpdaterUrl(char *pBuf, int BufSize, const char *pFile)
 {
-	str_format(pBuf, BufSize, "https://github.com/faffa81/FeX-V2-Client/releases/download/v5.1/5.1.zip", pFile);
-	return pBuf;
+    if(str_comp(pFile, "update.json") == 0)
+    {
+        str_copy(pBuf, "https://api.github.com/repos/faffa81/FeX-V2-Client/releases/latest", BufSize);
+    }
+    else 
+    {
+        str_format(pBuf, BufSize, "https://github.com/faffa81/FeX-V2-Client/releases/download/v%s/%s", 
+            FEX_RELEASE_VERSION, pFile);
+    }
+    return pBuf;
 }
 
 static const char *GetUpdaterDestPath(char *pBuf, int BufSize, const char *pFile, const char *pDestPath)
@@ -124,10 +132,18 @@ int CUpdater::GetCurrentPercent()
 
 void CUpdater::FetchFile(const char *pFile, const char *pDestPath)
 {
-	CLockScope ls(m_Lock);
-	m_pCurrentTask = std::make_shared<CUpdaterFetchTask>(this, pFile, pDestPath);
-	str_copy(m_aStatus, m_pCurrentTask->Dest());
-	m_pHttp->Run(m_pCurrentTask);
+    CLockScope ls(m_Lock);
+    m_pCurrentTask = std::make_shared<CUpdaterFetchTask>(this, pFile, pDestPath);
+
+    // Add GitHub API headers for update.json request
+    if(str_comp(pFile, "update.json") == 0)
+    {
+        m_pCurrentTask->Header("Accept: application/vnd.github.v3+json");
+        m_pCurrentTask->Header("User-Agent: FeX-Client");
+    }
+
+    str_copy(m_aStatus, m_pCurrentTask->Dest());
+    m_pHttp->Run(m_pCurrentTask);
 }
 
 bool CUpdater::MoveFile(const char *pFile)
@@ -235,43 +251,72 @@ bool CUpdater::ReplaceServer()
 
 void CUpdater::ParseUpdate()
 {
-	char aPath[IO_MAX_PATH_LENGTH];
-	void *pBuf;
-	unsigned Length;
-	if(!m_pStorage->ReadFile(m_pStorage->GetBinaryPath("update/update.json", aPath, sizeof(aPath)), IStorage::TYPE_ABSOLUTE, &pBuf, &Length))
-		return;
+    char aPath[IO_MAX_PATH_LENGTH];
+    void *pBuf;
+    unsigned Length;
 
-	json_value *pVersions = json_parse((json_char *)pBuf, Length);
-	free(pBuf);
+    if(!m_pStorage->ReadFile(m_pStorage->GetBinaryPath("update/update.json", aPath, sizeof(aPath)), 
+        IStorage::TYPE_ABSOLUTE, &pBuf, &Length))
+        return;
 
-	if(pVersions && pVersions->type == json_array)
-	{
-		for(int i = 0; i < json_array_length(pVersions); i++)
-		{
-			const json_value *pTemp;
-			const json_value *pCurrent = json_array_get(pVersions, i);
-			if(str_comp(json_string_get(json_object_get(pCurrent, "version")), GAME_RELEASE_VERSION))
-			{
-				if(json_boolean_get(json_object_get(pCurrent, "client")))
-					m_ClientUpdate = true;
-				if(json_boolean_get(json_object_get(pCurrent, "server")))
-					m_ServerUpdate = true;
-				if((pTemp = json_object_get(pCurrent, "download"))->type == json_array)
-				{
-					for(int j = 0; j < json_array_length(pTemp); j++)
-						AddFileJob(json_string_get(json_array_get(pTemp, j)), true);
-				}
-				if((pTemp = json_object_get(pCurrent, "remove"))->type == json_array)
-				{
-					for(int j = 0; j < json_array_length(pTemp); j++)
-						AddFileJob(json_string_get(json_array_get(pTemp, j)), false);
-				}
-			}
-			else
-				break;
-		}
-	}
-	json_value_free(pVersions);
+    json_value *pJson = json_parse((json_char *)pBuf, Length);
+    free(pBuf);
+
+    if(!pJson || pJson->type != json_object)
+    {
+        json_value_free(pJson);
+        return;
+    }
+
+    // Get latest version from GitHub release
+    const char *pLatestVersion = json_string_get(json_object_get(pJson, "tag_name"));
+    if(!pLatestVersion)
+    {
+        json_value_free(pJson);
+        return;
+    }
+
+    // Remove 'v' prefix and store latest version
+    if(pLatestVersion[0] == 'v')
+        pLatestVersion++;
+        
+    str_copy(m_aLatestVersion, pLatestVersion, sizeof(m_aLatestVersion));
+
+    // Compare versions
+    if(str_comp(m_aLatestVersion, FEX_RELEASE_VERSION) != 0)
+    {
+        dbg_msg("updater", "Update available: %s -> %s", FEX_RELEASE_VERSION, m_aLatestVersion);
+        
+        // Get assets array
+        const json_value *pAssets = json_object_get(pJson, "assets");
+        if(pAssets && pAssets->type == json_array)
+        {
+            for(int i = 0; i < json_array_length(pAssets); i++)
+            {
+                const json_value *pAsset = json_array_get(pAssets, i);
+                const char *pFileName = json_string_get(json_object_get(pAsset, "name"));
+                
+                if(pFileName)
+                {
+                    if(str_endswith(pFileName, PLAT_EXT))
+                    {
+                        if(str_startswith(pFileName, CLIENT_EXEC))
+                            m_ClientUpdate = true;
+                        else if(str_startswith(pFileName, SERVER_EXEC))
+                            m_ServerUpdate = true;
+                    }
+                    AddFileJob(pFileName, true);
+                }
+            }
+        }
+    }
+    else
+    {
+        dbg_msg("updater", "Client is up to date (version %s)", FEX_RELEASE_VERSION);
+        SetCurrentState(IUpdater::CLEAN);
+    }
+
+    json_value_free(pJson);
 }
 
 void CUpdater::InitiateUpdate()

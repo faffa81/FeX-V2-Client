@@ -1525,6 +1525,10 @@ void CMenus::Render()
 			{
 				RenderUpdateLogs(MainView);
 			}
+			else if(m_MenuPage == PAGE_CREDITS)
+			{
+				RenderCredits(MainView);
+			}
 
 			RenderMenubar(TabBar, ClientState);
 		}
@@ -2779,6 +2783,11 @@ void CMenus::RenderBackground()
 
 	// restore screen
 	Ui()->MapScreen();
+}
+
+void CMenus::RenderCredits(CUIRect MainView)
+{
+	
 }
 
 bool CMenus::CheckHotKey(int Key) const

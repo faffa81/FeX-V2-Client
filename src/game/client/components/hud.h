@@ -103,6 +103,8 @@ class CHud : public CComponent
 
 	static constexpr float MOVEMENT_INFORMATION_LINE_HEIGHT = 8.0f;
 
+	friend class CActions;
+
 public:
 	CHud();
 	virtual int Sizeof() const override { return sizeof(*this); }
@@ -110,7 +112,6 @@ public:
 	void ResetHudContainers();
 	virtual void OnWindowResize() override;
 	virtual void OnReset() override;
-	virtual bool OnInput(const IInput::CEvent &Event) override;
 	vec2 WorldToScreen(vec2 WorldPos);
 	virtual void OnRender() override;
 	virtual void OnInit() override;
@@ -188,24 +189,6 @@ private:
     STextContainerIndex m_NotificationTextContainerIndex;
 
 	int m_lastSoloState;
-
-    bool m_SpectatorActionMenuActive;
-    int m_SpectatorActionPage;
-    float m_SpectatorActionMenuAlpha;
-    int64_t m_SpectatorActionMenuShowTime;
-    
-    void RenderSpectatorActionMenu();
-    bool IsSpectatorActionMenuShown();
-    void HandleSpectatorActionInput(int Key);
-
-    // Icon indices for the action menu
-    int m_WarIconOffset;
-    int m_TeamIconOffset;
-    int m_HelperIconOffset;
-    int m_ClanIconOffset;
-
-    void PrepareSpectatorActionIcons();
-	vec2 m_SpectatorActionMenuPos{0, 0};
 };
 
 #endif

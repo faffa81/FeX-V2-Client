@@ -85,6 +85,7 @@ public:
 	void SetCurrentState(EUpdaterState NewState) REQUIRES(!m_Lock);
 	void AddFileJob(const char *pFile, bool Job);
 	CUpdater();
+	char m_aLatestVersion[64];
 
 	EUpdaterState GetCurrentState() override REQUIRES(!m_Lock);
 	void GetCurrentFile(char *pBuf, int BufSize) override REQUIRES(!m_Lock);

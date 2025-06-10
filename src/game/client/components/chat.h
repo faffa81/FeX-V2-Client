@@ -84,6 +84,7 @@ class CChat : public CComponent
 		MODE_NONE = 0,
 		MODE_ALL,
 		MODE_TEAM,
+		MODE_DISCORD,
 		MODE_SILENT,
 
 		CHAT_SERVER = 0,
@@ -126,6 +127,21 @@ class CChat : public CComponent
 		bool operator<=(const CCommand &Other) const { return str_comp(m_aName, Other.m_aName) <= 0; }
 		bool operator==(const CCommand &Other) const { return str_comp(m_aName, Other.m_aName) == 0; }
 	};
+
+	struct CCommandInfo
+    {
+        const char *m_pName;
+        const char *m_pParams;
+        const char *m_pHelp;
+        bool m_IsBindChat;
+    };
+
+    std::vector<CCommandInfo> m_CommandInfos;
+    void UpdateCommandInfos();
+    bool GetCommandInfo(const char *pInput, CCommandInfo *pInfo);
+    
+    float m_CommandBoxHeight;
+    bool m_ShowCommandBox;
 
 	struct SOriginalPlayerData
 	{

@@ -402,9 +402,9 @@ void CFex::PlayerInfo(const char *pName)
 		GameClient()->aMessage("│");
 
 		if(GameClient()->m_aClients[Id].m_AuthLevel > 0)
-			str_format(aBuf, sizeof(aBuf), "│ Authed: Yes, Auth Level %s", GameClient()->m_aClients[Id].m_AuthLevel);
+			str_format(aBuf, sizeof(aBuf), "│ Authed: Yes, Auth Level %d", GameClient()->m_aClients[Id].m_AuthLevel);
 		else
-		str_format(aBuf, sizeof(aBuf), "│ Authed: No", GameClient()->m_aClients[Id].m_AuthLevel);
+			str_format(aBuf, sizeof(aBuf), "│ Authed: No", GameClient()->m_aClients[Id].m_AuthLevel);
 		GameClient()->aMessage(aBuf);
 
 
@@ -413,6 +413,11 @@ void CFex::PlayerInfo(const char *pName)
 	}
 	else
 		GameClient()->aMessage(aBuf);
+}
+
+const char* CFex::NameFromId(int ID)
+{
+    return m_pClient->m_aClients[ID].m_aName;
 }
 
 // Temp War Commands
@@ -455,142 +460,124 @@ void CFex::ConUnTempMute(IConsole::IResult *pResult, void *pUserData)
 
 void CFex::OnRender()
 {
-    // // Handle auto join team
-    // if(g_Config.m_ClAutoJoinTeam > 0 && !m_AutoJoinTeamAttempted && Client()->State() == IClient::STATE_ONLINE)
-    // {
-	// 	// Check if already in a team
-	// 	bool AlreadyInTeam = false;
-	// 	for(int i = 0; i < MAX_CLIENTS; i++)
-	// 	{
-	// 		if(i == m_pClient->m_Snap.m_LocalClientId && m_pClient->m_aClients[i].m_Team != 0)
-	// 		{
-	// 			AlreadyInTeam = true;
-	// 			return;
-	// 		}
-	// 	}
+	// Handle auto join team
+	if(g_Config.m_ClAutoJoinTeam > 0 && !m_AutoJoinTeamAttempted && Client()->State() == IClient::STATE_ONLINE)
+	{
+		if (g_Config.m_ClAutoJoinTeam == 0)
+			return;
+		bool AlreadyInTeam = false; // Initialize to false
+		if(m_pClient->m_Snap.m_LocalClientId >= 0)
+		{
+			int LocalTeam = m_pClient->m_aClients[m_pClient->m_Snap.m_LocalClientId].m_Team;
+			if(LocalTeam != 0) // If not in spectator/freemode
+			{
+				AlreadyInTeam = true;
+				m_AutoJoinTeamAttempted = true; // Prevent further attempts
+				return;
+			}
+		}
 
-	// 	if(!AlreadyInTeam)
-	// 	{
-	// 		if(m_AutoJoinTeamTick == 0)
-	// 		{
-	// 			m_AutoJoinTeamTick = time_get() + time_freq() * g_Config.m_ClAutoJoinTeamDelay;
-	// 		}
-	// 		else if(time_get() > m_AutoJoinTeamTick)
-	// 		{
-	// 			// Try to join team, if full try next team
-	// 			int TargetTeam = g_Config.m_ClAutoJoinTeam;
-	// 			bool TeamFull = false;
+		if(!AlreadyInTeam)
+		{
+			if(m_AutoJoinTeamTick == 0)
+			{
+				m_AutoJoinTeamTick = time_get() + time_freq() * g_Config.m_ClAutoJoinTeamDelay;
+			}
+			else if(time_get() > m_AutoJoinTeamTick)
+			{
+				int TargetTeam = g_Config.m_ClAutoJoinTeam;
+				bool TeamFull = false;
 				
-	// 			// Check if team is full by counting players
-	// 			if(TargetTeam > 0) // Don't check for team 0 (freemode)
-	// 			{
-	// 				int PlayersInTeam = 0;
-	// 				for(int i = 0; i < MAX_CLIENTS; i++)
-	// 				{
-	// 					if(m_pClient->m_aClients[i].m_Active && !m_pClient->m_aClients[i].m_Spec && m_pClient->m_Teams.Team(i) == TargetTeam)
-	// 						PlayersInTeam++;
-	// 				}
+				if(TargetTeam > 0)
+				{
+					int PlayersInTeam = 0;
+					for(int i = 0; i < MAX_CLIENTS; i++)
+					{
+						if(m_pClient->m_aClients[i].m_Active && !m_pClient->m_aClients[i].m_Spec && m_pClient->m_Teams.Team(i) == TargetTeam)
+							PlayersInTeam++;
+					}
 					
-	// 				// If team has too many players, try next team
-	// 				if(PlayersInTeam >= 1) // Assuming max team size is 16
-	// 				{
-	// 					TeamFull = true;
-	// 					TargetTeam = (TargetTeam % 63) + 1; // Try next team (1-63)
-	// 				}
-	// 			}
+					if(PlayersInTeam > 0)
+					{
+						TeamFull = true;
+						TargetTeam = (TargetTeam % 63) + 1;
+					}
+				}
 				
-	// 			// Send team change command
-	// 			char teamswitch[128];
-	// 			str_format(teamswitch, sizeof(teamswitch), "/team %d", TargetTeam);
-	// 			m_pClient->m_Chat.SendChat(0, teamswitch);
+				char teamswitch[128];
+				str_format(teamswitch, sizeof(teamswitch), "/team %d", TargetTeam);
+				m_pClient->m_Chat.SendChat(0, teamswitch);
 				
-	// 			m_AutoJoinTeamAttempted = true;
-	// 			m_AutoJoinTeamTick = 0;
+				m_AutoJoinTeamAttempted = true;
 				
-	// 			// Log the action
-	// 			char aBuf[128];
-	// 			str_format(aBuf, sizeof(aBuf), "Auto joined team %d %s", 
-	// 				TargetTeam, 
-	// 				TeamFull ? " (original team was full)" : "");
-	// 			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX(Autojoin)->", aBuf);
-	
-	// 			if(g_Config.m_ClAutoJoinTeamLock)
-	// 			{
-	// 				char teamlock[128];
-	// 				str_format(teamlock, sizeof(teamlock), "/lock");
-	// 				m_pClient->m_Chat.SendChat(0, teamlock);
-	// 				char aBuf[128];
-	// 				str_format(aBuf, sizeof(aBuf), "joined team %d with locking the team", TargetTeam); 
-	// 				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX(Autojoin)->", aBuf);
-	// 			}
-	
-	// 			// Reset attempt flag after delay instead of setting it permanently
-	// 			m_AutoJoinTeamTick = time_get() + time_freq() * g_Config.m_ClAutoJoinTeamDelay; // 3 second cooldown before next attempt
-	// 			m_AutoJoinTeamAttempted = false; // Reset the attempt flag to allow another try
-						
-	// 		}
-	// 	}
-    // }
+				char aBuf[128];
+				str_format(aBuf, sizeof(aBuf), "Auto joined team %d%s", 
+					TargetTeam, 
+					TeamFull ? " (original team was full)" : "");
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX(Autojoin)->", aBuf);
+
+				if(g_Config.m_ClAutoJoinTeamLock)
+				{
+					char teamlock[128];
+					str_copy(teamlock, "/lock", sizeof(teamlock));
+					m_pClient->m_Chat.SendChat(0, teamlock);
+					str_format(aBuf, sizeof(aBuf), "Locked team %d", TargetTeam); 
+					Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "FeX(Autojoin)->", aBuf);
+				}
+
+				m_AutoJoinTeamTick = 0;
+			}
+		}
+	}
 
 	// Handle auto join dummy
 	if(g_Config.m_ClAutoJoinDummy && Client()->State() == IClient::STATE_ONLINE)
 	{
-		// If already connected, reset flags and stop
 		if(Client()->DummyConnected())
 		{
 			if(g_Config.m_ClAutoJoinDummySwitch && g_Config.m_ClDummy == 1 && !m_HasSwitchedBack)
 			{
 				g_Config.m_ClDummy = 0;
-				m_HasSwitchedBack = true; // Mark that we've switched back
+				m_HasSwitchedBack = true;
 				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", "Switched back to main player");
 			}
-			m_OnAttemptingDummyJoin = false;
-			m_AutoJoinDummyAttempted = false;
-			m_AutoJoinDummyTick = 0;
-			m_FirstTimerExpired = false;
 			return;
 		}
 
-		// Initialize timer if not set
-		if(m_AutoJoinDummyTick == 0)
-		{
-			m_AutoJoinDummyTick = time_get() + time_freq() * g_Config.m_ClAutoJoinDummyDelay;
-			m_OnAttemptingDummyJoin = true;
-			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", "Waiting %d seconds to attempt dummy join...", g_Config.m_ClAutoJoinDummyDelay);
-		}
-
-		// Only check for player leaves after first timer has expired
-		if(m_FirstTimerExpired && m_OnAttemptingDummyJoin)
+		if(m_FirstDummyAttempted)
 		{
 			CheckPlayerLeave();
-			m_AutoJoinDummyTick = time_get() + time_freq() * g_Config.m_ClAutoJoinDummyDelay;
+			m_FirstDummyAttempted = false;  
 		}
 
-		// Try joining when timer expires
-		if(time_get() > m_AutoJoinDummyTick && m_OnAttemptingDummyJoin)
+		if(m_OnAttemptingDummyJoin)
 		{
-			m_FirstTimerExpired = true; // Mark that initial timer has expired
-			Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", "Attempting to join with dummy");
-			
-			// Connect dummy and force switch back to main player
-			Console()->ExecuteLine("dummy_connect");
-			if(g_Config.m_ClAutoJoinDummySwitch)
+			if(m_AutoJoinDummyTick == 0)
 			{
-				g_Config.m_ClDummy = 0;
+				m_AutoJoinDummyTick = time_get() + time_freq() * g_Config.m_ClAutoJoinDummyDelay;
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", "Waiting %d seconds to attempt dummy join...", g_Config.m_ClAutoJoinDummyDelay);
 			}
+			else if(time_get() > m_AutoJoinDummyTick)
+			{
+				Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", "Attempting to join with dummy");
+				Console()->ExecuteLine("dummy_connect");
 
-			// Reset flags after attempt
-			m_OnAttemptingDummyJoin = false;
-			m_AutoJoinDummyTick = time_get() + time_freq() * g_Config.m_ClAutoJoinDummyDelay;
+				m_FirstDummyAttempted = true;  
+
+				if(g_Config.m_ClAutoJoinDummySwitch)
+					g_Config.m_ClDummy = 0;
+
+				m_AutoJoinDummyTick = time_get() + time_freq() * g_Config.m_ClAutoJoinDummyDelay;
+			}
 		}
 	}
-    
-    // Reset auto join flags when disconnected
+
+
     if(Client()->State() != IClient::STATE_ONLINE)
     {
-        // m_AutoJoinTeamAttempted = false;
+        m_AutoJoinTeamAttempted = false;
         m_AutoJoinDummyAttempted = false;
-        // m_AutoJoinTeamTick = 0;
+        m_AutoJoinTeamTick = 0;
         m_AutoJoinDummyTick = 0;
         m_ServerJustJoined = false;
 		m_OnAttemptingDummyJoin = false;
@@ -607,16 +594,17 @@ void CFex::CheckPlayerLeave()
             CurrentPlayers++;
     }
 
-	m_LastPlayerCount = CurrentPlayers;
-
-    // If player count decreased, try joining immediately
     if(CurrentPlayers < m_LastPlayerCount)
     {
-        m_AutoJoinDummyTick = 0; // Reset tick to try joining immediately
-		Console()->ExecuteLine("dummy_connect");
-        Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", "Player left, attempting to join");
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "Player left, attempting to join (Players: %d -> %d)", m_LastPlayerCount, CurrentPlayers);
+        Console()->ExecuteLine("dummy_connect");
+        Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "autojoin", aBuf);
     }
+
+    m_LastPlayerCount = CurrentPlayers;
 }
+
 void CFex::OnConsoleInit()
 {
 	Console()->Register("onlineinfo", "", CFGFLAG_CLIENT, ConOnlineInfo, this, "Shows you how many people of default lists are on the current server");
@@ -639,10 +627,10 @@ void CFex::OnInit()
 	TextRender()->SetCustomFace(g_Config.m_ClCustomFont);
 
 	// Auto	join variables
-	// m_AutoJoinTeamTick = 0;
+	m_AutoJoinTeamTick = 0;
 	m_AutoJoinDummyTick = 0;
 	m_LastPlayerCount = 0;
-	// m_AutoJoinTeamAttempted = false;
+	m_AutoJoinTeamAttempted = false;
 	m_AutoJoinDummyAttempted = false;
 	m_ServerJustJoined = false;
 	m_OnAttemptingDummyJoin = false;
@@ -665,10 +653,5 @@ void CFex::OnStateChange(int NewState, int OldState)
         m_ServerJustJoined = true;
     }
 }
-
-bool CFex::IsSpecialClan(const char* pClanName) {
-    return str_comp(pClanName, SPECIAL_CLAN) == 0;
-}
-
 
 

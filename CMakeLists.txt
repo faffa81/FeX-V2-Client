@@ -120,8 +120,8 @@ endif()
 option(WEBSOCKETS "Enable websockets support" OFF)
 option(MYSQL "Enable mysql support" OFF)
 option(TEST_MYSQL "Test mysql support in unit tests (also sets -DMYSQL=ON)" OFF)
-option(AUTOUPDATE "Enable the autoupdater" OFF)
-option(INFORM_UPDATE "Inform about available updates" ON)
+option(AUTOUPDATE "Enable the autoupdater" ON)
+option(INFORM_UPDATE "Inform about available updates" OFF)
 option(VIDEORECORDER "Enable video recording support via FFmpeg" ON)
 option(UPNP "Enable UPnP support" OFF)
 option(ANTIBOT "Enable support for a dynamic anticheat library (not provided, see src/antibot for interface if you want to implement your own)" OFF)
@@ -131,7 +131,7 @@ option(SERVER "Compile server" ON)
 option(TOOLS "Compile tools" ON)
 option(DOWNLOAD_GTEST "Download and compile GTest" ${AUTO_DEPENDENCIES_DEFAULT})
 option(STEAM "Build the Steam release version" OFF)
-option(DISCORD "Enable Discord rich presence support" OFF)
+option(DISCORD "Enable Discord rich presence support" ON)
 option(DISCORD_DYNAMIC "Enable discovering Discord rich presence libraries at runtime (Linux only)" OFF)
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
 option(DEV "Don't generate stuff necessary for packaging" OFF)
@@ -1456,6 +1456,9 @@ set(EXPECTED_DATA
   editor/tune.png
   emoticons.png
   extras.png
+
+  ## start of fex
+
   fex/binds/extra.cfg
   fex/binds/help.cfg
   fex/fonts/Cabin-Regular.ttf
@@ -1468,12 +1471,15 @@ set(EXPECTED_DATA
   fex/fonts/Nunito-Black.ttf
   fex/fonts/Rubik-Regular.ttf
   fex/icons/clans.png
-  fex/icons/FeXIcon.png
+  fex/icons/fex.png
   fex/icons/gl.png
   fex/icons/muted_icon.png
   fex/icons/settings_icon.png
   fex/icons/sword.png
   fex/icons/team.png
+
+  ## end of fex
+
   fonts/DejaVuSans.ttf
   fonts/Font_Awesome_6_Free-Solid-900.otf
   fonts/GlowSansJ-Compressed-Book.otf
@@ -2401,14 +2407,14 @@ if(CLIENT)
     components/fex/fexpets.h
     components/fex/fexplayerindicator.cpp
     components/fex/fexplayerindicator.h
+    components/fex/fexquickactions.cpp
+    components/fex/fexquickactions.h
     components/fex/fexskinprofiles.cpp
     components/fex/fexskinprofiles.h
     components/fex/fexstatusbar.cpp
     components/fex/fexstatusbar.h
     components/fex/fextrails.cpp
     components/fex/fextrails.h
-    components/fex/fexupdater.cpp
-    components/fex/fexupdater.h
     components/fex/fexversion.h
     components/fex/fexvisual.cpp
     components/fex/fexvisual.h
@@ -3232,7 +3238,7 @@ function(regex_inverted VAR)
   set(${VAR} ${RESULT} PARENT_SCOPE)
 endfunction()
 
-set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_NAME FeX)
 set(CPACK_GENERATOR TGZ TXZ)
 set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
 if(TARGET_OS STREQUAL "mac")
@@ -3244,9 +3250,9 @@ else()
 endif()
 set(CPACK_COMPONENTS_ALL portable)
 set(CPACK_SOURCE_GENERATOR ZIP TGZ TBZ2 TXZ)
-set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+set(CPACK_PACKAGE_VERSION_MAJOR ${FVERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${FVERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${FVERSION_PATCH})
 set(CPACK_PACKAGE_VERSION ${VERSION})
 set(CPACK_SYSTEM_NAME ${CMAKE_SYSTEM_NAME})
 

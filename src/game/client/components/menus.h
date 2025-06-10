@@ -671,6 +671,8 @@ protected:
 
 	static CUi::EPopupMenuFunctionResult PopupMapPicker(void *pContext, CUIRect View, bool Active);
 
+	void RenderCredits(CUIRect MainView);
+
 	void SetNeedSendInfo();
 	void UpdateColors();
 
@@ -760,6 +762,7 @@ public:
 		PAGE_FAVORITE_COMMUNITY_5,
 		PAGE_DEMOS,
 		PAGE_SETTINGS,
+		PAGE_CREDITS,
 		PAGE_NETWORK,
 		PAGE_GHOST,
 		PAGE_UPDATES,
@@ -895,6 +898,7 @@ public:
 	};
 
 private:
+    static int s_TrashButtonId;
 	static int GhostlistFetchCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
 	void SetMenuPage(int NewPage);
 	void RefreshBrowserTab(bool Force);
@@ -932,6 +936,7 @@ public:
 	void RenderBar(CUIRect MainView);
 	void RenderPlayerPanelTopRight(const CUIRect &MainView);
 	void RenderUpdateLogs(CUIRect MainView);
+	void RenderSettingsQuickActions(CUIRect MainView);
 	// static int FindOldNumCallback(const CFsFileInfo *pInfo, int IsDir, int StorageType, void *pUser);
 	// int FindNextAvailableOldNumber(bool IsFexConfig);
 	// void BackupActiveConfigOnJoin(bool IsFexConfig);

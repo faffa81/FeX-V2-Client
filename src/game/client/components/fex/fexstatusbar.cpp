@@ -350,4 +350,5 @@ void CStatusBar::OnRender()
 
 		m_CursorX += SpaceBetweenItems;
 	}
+	TextRender()->TextColor(TextRender()->DefaultTextColor());
 }

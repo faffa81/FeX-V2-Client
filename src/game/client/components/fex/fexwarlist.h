@@ -53,7 +53,15 @@ public:
 	CWarType *m_pWarType = nullptr;
 	bool m_Imported = false;
 
+	static int s_DeleteButtonId;
+    int m_DeleteButtonId;
+
 	const CServerInfo *m_ServerInfo = nullptr;
+
+	CWarEntry()
+    {
+        m_DeleteButtonId = s_DeleteButtonId++;
+    }
 
 	CWarEntry(CWarType *pWarType)
 	{
@@ -75,6 +83,8 @@ public:
 		bool ClanMatch = str_comp(m_aClan, Other.m_aClan) == 0 && str_comp(m_aClan, "") != 0;
 		return (NameMatch || ClanMatch) && m_pWarType == Other.m_pWarType;
 	}
+
+	int GetDeleteId() const { return m_DeleteButtonId; }
 };
 
 // E-Client [Mutes]
@@ -200,6 +210,8 @@ public:
 	// It should be updated when m_WarList changes
 
 	CWarDataCache m_WarPlayers[MAX_CLIENTS];
+	
+	bool IsInList(const char *pName, const char *pClan, const char *pType);
 
 	virtual int Sizeof() const override { return sizeof(*this); }
 	virtual void OnNewSnapshot() override;
@@ -223,6 +235,8 @@ public:
 	int FindWarTypeWithName(const char *pName);
 	int FindWarTypeWithClan(const char *pClan);
 	char *GetWarTypeName(int ClientId);
+
+	void RemoveWarEntry(const char *pName, const char *pClan);
 
 	void AddWarEntry(const char *pName, const char *pClan, const char *pReason, const char *pType);
 	void AddWarType(const char *pType, ColorRGBA Color);

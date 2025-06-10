@@ -48,8 +48,9 @@ enum {
     FEX_TAB_VISUAL = 1,
     FEX_TAB_WARLIST = 2,
 	FEX_TAB_BINDWHEEL = 3,
-	FEX_TAB_STATUSBAR = 4,
-    NUMBER_OF_FEX_TABS = 5
+	FEX_TAB_QUICKACTIONS = 4,
+	FEX_TAB_STATUSBAR = 5,
+    NUMBER_OF_FEX_TABS = 6
 };
 
 typedef struct
@@ -90,13 +91,14 @@ enum EFeXPages
     FEX_PAGE_COUNT
 };
 
-static int s_aCurPage[NUMBER_OF_FEX_TABS] = {FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1};
+static int s_aCurPage[NUMBER_OF_FEX_TABS] = {FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1, FEX_PAGE_1};
 static const int s_aTabPageCount[NUMBER_OF_FEX_TABS] = {
     0,
     0,
     0,
     0,
     0,
+	0,
 };
 
 
@@ -114,6 +116,7 @@ void CMenus::RenderSettingsFeX(CUIRect MainView)
         Localize("FeX Visual Settings"),
         Localize("FeX Warlist"),
         Localize("FeX Bindwheel"),
+		Localize("FeX Quickactions"),
         Localize("FeX Statusbar"),
     };
 
@@ -144,7 +147,8 @@ void CMenus::RenderSettingsFeX(CUIRect MainView)
             case 2: s_CurTab = FEX_TAB_VISUAL;   break;
             case 3: s_CurTab = FEX_TAB_WARLIST;  break;
             case 4: s_CurTab = FEX_TAB_BINDWHEEL; break;
-            case 5: s_CurTab = FEX_TAB_STATUSBAR; break;
+			case 5: s_CurTab = FEX_TAB_QUICKACTIONS; break;
+            case 6: s_CurTab = FEX_TAB_STATUSBAR; break;
             default: s_CurTab = FEX_TAB_SETTINGS; break;
         }
         m_MenuTabInitialized = true;
@@ -170,11 +174,17 @@ void CMenus::RenderSettingsFeX(CUIRect MainView)
         g_Config.m_ClMenuTab = 4;
         RenderSettingsBindWheel(MainView);
     }
+	else if(s_CurTab == FEX_TAB_QUICKACTIONS)
+    {
+        g_Config.m_ClMenuTab = 5;
+        RenderSettingsQuickActions(MainView);
+    }
     else if(s_CurTab == FEX_TAB_STATUSBAR)
     {
         g_Config.m_ClMenuTab = 5;
         RenderSettingsStatusBar(MainView);
     }
+
 
 	static CButtonContainer s_LeftArrowButton;
 	static CButtonContainer s_RightArrowButton;
@@ -1060,20 +1070,20 @@ void CMenus::RenderVisualFex(CUIRect MainView)
 					static CUi::SDropDownState s_VisualDropDownState;
 					static CScrollRegion s_VisualDropDownScrollRegion;
 					s_VisualDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_VisualDropDownScrollRegion;
-					int VisualSelectedOld = g_Config.m_ClVisualModeW - 1;
+					int VisualSelectedOld = g_Config.m_ClVisualModeWeapon - 1;
 					CUIRect VisualDropDownRect;
 					VisualSettings.HSplitTop(LineSize, &VisualDropDownRect, &VisualSettings);
 					const int VisualSelectedNew = Ui()->DoDropDown(&VisualDropDownRect, VisualSelectedOld, s_VisualDropDownNames.data(), s_VisualDropDownNames.size(), s_VisualDropDownState);
 					if(VisualSelectedOld != VisualSelectedNew)
 					{
-						g_Config.m_ClVisualModeW = VisualSelectedNew + 1;
+						g_Config.m_ClVisualModeWeapon = VisualSelectedNew + 1;
 						VisualSelectedOld = VisualSelectedNew;
-						dbg_msg("FeX[visual]:", "visual mode[weapons] changed to %d", g_Config.m_ClVisualModeW);
+						dbg_msg("FeX[visual]:", "visual mode[weapons] changed to %d", g_Config.m_ClVisualModeWeapon);
 					}
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualWeapon, Localize("Visual Weapon"), &g_Config.m_ClVisualWeapon, &VisualSettings, LineSize);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualWeaponOthers, Localize("Visual Weapon Others"), &g_Config.m_ClVisualWeaponOthers, &VisualSettings, LineSize);
 
-					if(g_Config.m_ClVisualModeW == 3)
+					if(g_Config.m_ClVisualModeWeapon == 3)
 					{
 						Offset = Offset + 29.0f;
 						VisualSettings.HSplitTop(MarginExtraSmall, nullptr, &VisualSettings);
@@ -1094,19 +1104,19 @@ void CMenus::RenderVisualFex(CUIRect MainView)
 					static CUi::SDropDownState s_VisualDropDownState;
 					static CScrollRegion s_VisualDropDownScrollRegion;
 					s_VisualDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_VisualDropDownScrollRegion;
-					int VisualSelectedOld = g_Config.m_ClVisualModeH - 1;
+					int VisualSelectedOld = g_Config.m_ClVisualModeHook - 1;
 					CUIRect VisualDropDownRect;
 					VisualSettings.HSplitTop(LineSize, &VisualDropDownRect, &VisualSettings);
 					const int VisualSelectedNew = Ui()->DoDropDown(&VisualDropDownRect, VisualSelectedOld, s_VisualDropDownNames.data(), s_VisualDropDownNames.size(), s_VisualDropDownState);
 					if(VisualSelectedOld != VisualSelectedNew)
 					{
-						g_Config.m_ClVisualModeH = VisualSelectedNew + 1;
+						g_Config.m_ClVisualModeHook = VisualSelectedNew + 1;
 						VisualSelectedOld = VisualSelectedNew;
-						dbg_msg("FeX[visual]:", "visual mode[hook] changed to %d", g_Config.m_ClVisualModeH);
+						dbg_msg("FeX[visual]:", "visual mode[hook] changed to %d", g_Config.m_ClVisualModeHook);
 					}
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualHook, Localize("Visual Hook"), &g_Config.m_ClVisualHook, &VisualSettings, LineSize);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualHookOthers, Localize("Visual Hook Others"), &g_Config.m_ClVisualHookOthers, &VisualSettings, LineSize);
-					if(g_Config.m_ClVisualModeH == 3)
+					if(g_Config.m_ClVisualModeHook == 3)
 					{
 						Offset = Offset + 29.0f;
 						VisualSettings.HSplitTop(MarginExtraSmall, nullptr, &VisualSettings);
@@ -1127,19 +1137,19 @@ void CMenus::RenderVisualFex(CUIRect MainView)
 					static CUi::SDropDownState s_VisualDropDownState;
 					static CScrollRegion s_VisualDropDownScrollRegion;
 					s_VisualDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_VisualDropDownScrollRegion;
-					int VisualSelectedOld = g_Config.m_ClVisualModeT - 1;
+					int VisualSelectedOld = g_Config.m_ClVisualModeTee - 1;
 					CUIRect VisualDropDownRect;
 					VisualSettings.HSplitTop(LineSize, &VisualDropDownRect, &VisualSettings);
 					const int VisualSelectedNew = Ui()->DoDropDown(&VisualDropDownRect, VisualSelectedOld, s_VisualDropDownNames.data(), s_VisualDropDownNames.size(), s_VisualDropDownState);
 					if(VisualSelectedOld != VisualSelectedNew)
 					{
-						g_Config.m_ClVisualModeT = VisualSelectedNew + 1;
+						g_Config.m_ClVisualModeTee = VisualSelectedNew + 1;
 						VisualSelectedOld = VisualSelectedNew;
-						dbg_msg("FeX[visual]:", "visual mode[Tee] changed to %d", g_Config.m_ClVisualModeT);
+						dbg_msg("FeX[visual]:", "visual mode[Tee] changed to %d", g_Config.m_ClVisualModeTee);
 					}
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualTees, Localize("Visual Tees"), &g_Config.m_ClVisualTees, &VisualSettings, LineSize);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualTeesOthers, Localize("Visual Tees Others"), &g_Config.m_ClVisualTeesOthers, &VisualSettings, LineSize);
-					if(g_Config.m_ClVisualModeT == 3)
+					if(g_Config.m_ClVisualModeTee == 3)
 					{
 						Offset = Offset + 29.0f;
 						VisualSettings.HSplitTop(MarginExtraSmall, nullptr, &VisualSettings);
@@ -1160,19 +1170,19 @@ void CMenus::RenderVisualFex(CUIRect MainView)
 					static CUi::SDropDownState s_VisualDropDownState;
 					static CScrollRegion s_VisualDropDownScrollRegion;
 					s_VisualDropDownState.m_SelectionPopupContext.m_pScrollRegion = &s_VisualDropDownScrollRegion;
-					int VisualSelectedOld = g_Config.m_ClVisualModeC - 1;
+					int VisualSelectedOld = g_Config.m_ClVisualModeCursor - 1;
 					CUIRect VisualDropDownRect;
 					VisualSettings.HSplitTop(LineSize, &VisualDropDownRect, &VisualSettings);
 					const int VisualSelectedNew = Ui()->DoDropDown(&VisualDropDownRect, VisualSelectedOld, s_VisualDropDownNames.data(), s_VisualDropDownNames.size(), s_VisualDropDownState);
 					if(VisualSelectedOld != VisualSelectedNew)
 					{
-						g_Config.m_ClVisualModeC = VisualSelectedNew + 1;
+						g_Config.m_ClVisualModeCursor = VisualSelectedNew + 1;
 						VisualSelectedOld = VisualSelectedNew;
-						dbg_msg("FeX[visual]:", "visual mode[Cursor] changed to %d", g_Config.m_ClVisualModeC);
+						dbg_msg("FeX[visual]:", "visual mode[Cursor] changed to %d", g_Config.m_ClVisualModeCursor);
 					}
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualCursor, Localize("Visual Cursor"), &g_Config.m_ClVisualCursor, &VisualSettings, LineSize);
 					DoButton_CheckBoxAutoVMarginAndSet(&g_Config.m_ClVisualCursorSpec, Localize("Visual Cursor Spectators"), &g_Config.m_ClVisualCursorSpec, &VisualSettings, LineSize);
-					if(g_Config.m_ClVisualModeC == 3)
+					if(g_Config.m_ClVisualModeCursor == 3)
 					{
 						Offset = Offset + 29.0f;
 						VisualSettings.HSplitTop(LineSize, &Button, &VisualSettings);
@@ -3777,7 +3787,7 @@ void CMenus::RenderUpdateLogs(CUIRect MainView)
 
     const CClient::STabContents &Tabs = Client()->GetTabContents();
 
-    if (Tabs.m_vUpdateLogs.empty())
+    if(Tabs.m_vUpdateLogs.empty())
     {
         dbg_msg("client", "RenderUpdateLogs: No update logs available");
         Ui()->DoLabel(&ContentView, "No update logs available", 14.0f, TEXTALIGN_CENTER);
@@ -3841,7 +3851,7 @@ void CMenus::RenderUpdateLogs(CUIRect MainView)
     ScrollParams.m_ScrollbarWidth = 15.0f;
     s_ScrollRegion.Begin(&ContentView, &s_ContentScrollValue, &ScrollParams);
 
-    if (s_ScrollRegion.AddRect(ContentView))
+    if(s_ScrollRegion.AddRect(ContentView))
     {
         CUIRect TextRect = ContentView;
         float y = TextRect.y;
@@ -3851,20 +3861,20 @@ void CMenus::RenderUpdateLogs(CUIRect MainView)
             int TextAlign = TEXTALIGN_LEFT;
             float LineHeight = 15.0f;
             
-            if (line.m_bHeader)
+            if(line.m_bHeader)
             {
                 LogFontSize = 25.0f;
                 TextAlign = TEXTALIGN_CENTER;
                 LineHeight = 25.0f;
             }
-            else if (line.m_bBold)
+            else if(line.m_bBold)
             {
                 LogFontSize = 17.0f;
                 LineHeight = 17.0f;
             }
             
             CUIRect LineRect = { TextRect.x, y, TextRect.w, LineHeight };
-            if (s_ScrollRegion.AddRect(LineRect))
+            if(s_ScrollRegion.AddRect(LineRect))
             {
                 Ui()->DoLabel(&LineRect, line.m_aText, LogFontSize, TextAlign);
             }
@@ -3872,4 +3882,141 @@ void CMenus::RenderUpdateLogs(CUIRect MainView)
         }
         s_ScrollRegion.End();
     }
+}
+
+void CMenus::RenderSettingsQuickActions(CUIRect MainView)
+{
+    CUIRect LeftView, RightView;
+    MainView.HSplitTop(5.0f, nullptr, &MainView);
+    MainView.VSplitLeft(MainView.w / 2.1f, &LeftView, &RightView);
+
+    const float Radius = minimum(RightView.w, RightView.h) / 2.0f;
+    vec2 Pos = vec2(RightView.x + RightView.w / 2.0f, RightView.y + RightView.h / 2.0f);
+
+    Graphics()->TextureClear();
+    Graphics()->QuadsBegin();
+    Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.3f);
+    Graphics()->DrawCircle(Pos.x, Pos.y, Radius, 64);
+    Graphics()->QuadsEnd();
+
+    static int s_SelectedPageIndex = 0;
+    static char s_aPageName[ACTION_PAGE_MAX_NAME];
+    static char s_aActionName[ACTION_MAX_NAME];
+    static char s_aActionCommand[ACTION_MAX_CMD];
+	
+	if(GameClient()->m_FexQuickActions.m_NumPages > 3)
+    	s_SelectedPageIndex = 3;
+	else
+	{
+		s_SelectedPageIndex = GameClient()->m_FexQuickActions.m_NumPages;
+		GameClient()->m_FexQuickActions.AddPage("New Page");
+	}
+
+
+    SPage *pPage = &GameClient()->m_FexQuickActions.m_aPages[s_SelectedPageIndex];
+
+    float PageTextWidth = TextRender()->TextWidth(16.0f, pPage->m_aName);
+    TextRender()->Text(Pos.x - PageTextWidth / 2, Pos.y - 10, 16.0f, pPage->m_aName);
+
+    int NumActions = pPage->m_NumActions;
+    if(NumActions <= 0)
+        NumActions = 3;
+
+    const float InnerRadius = 30.0f;
+
+    for(int i = 0; i < NumActions; i++)
+    {
+        float Angle = (i * 2.0f * pi / NumActions) - pi / 2;
+        float midAngle = Angle + (pi / NumActions);
+
+        vec2 IconPos = Pos + vec2(cos(midAngle) * ((Radius + InnerRadius) / 2.0f), sin(midAngle) * ((Radius + InnerRadius) / 2.0f));
+
+        const char *pActionText = pPage->m_aActions[i].m_aName;
+        if(!pActionText || pActionText[0] == '\0')
+        {
+            pActionText = "Empty";
+        }
+
+        float thisFontSize = 8.0f;
+        float TextWidth = TextRender()->TextWidth(thisFontSize, pActionText, -1, -1.0f);
+        TextRender()->TextColor(1.f, 1.f, 1.f, 1.f);
+        TextRender()->Text(IconPos.x - TextWidth / 2, IconPos.y - 6, thisFontSize, pActionText, -1.0f);
+        TextRender()->TextColor(TextRender()->DefaultTextColor());
+    }
+
+	float Spacing = 5.0f;
+	float InputHeight = LineSize;
+
+	LeftView.HSplitTop(Margin, nullptr, &LeftView);
+
+	CUIRect NavRow, PrevButtonRect, NextButtonRect;
+	LeftView.HSplitTop(InputHeight, &NavRow, &LeftView);
+	NavRow.VSplitMid(&PrevButtonRect, &NextButtonRect);
+	PrevButtonRect.VSplitRight(Spacing / 2, &PrevButtonRect, nullptr);
+	NextButtonRect.VSplitLeft(Spacing / 2, nullptr, &NextButtonRect);
+
+	static CButtonContainer s_PrevButton;
+	if(DoButton_Menu(&s_PrevButton, "Previous Page", 0, &PrevButtonRect))
+		s_SelectedPageIndex = (s_SelectedPageIndex - 1 + GameClient()->m_FexQuickActions.m_NumPages) % GameClient()->m_FexQuickActions.m_NumPages;
+
+	static CButtonContainer s_NextButton;
+	if(DoButton_Menu(&s_NextButton, "Next Page", 0, &NextButtonRect))
+		s_SelectedPageIndex = (s_SelectedPageIndex + 1) % GameClient()->m_FexQuickActions.m_NumPages;
+
+	LeftView.HSplitTop(Margin, nullptr, &LeftView);
+
+	CUIRect LabelRect, EditRect;
+	LeftView.HSplitTop(InputHeight, &LabelRect, &LeftView);
+	Ui()->DoLabel(&LabelRect, "Page Name:", 14.0f, TEXTALIGN_ML);
+	LeftView.HSplitTop(InputHeight, &EditRect, &LeftView);
+	static CLineInput s_PageInput;
+	s_PageInput.SetBuffer(s_aPageName, sizeof(s_aPageName));
+	Ui()->DoEditBox(&s_PageInput, &EditRect, 12.0f);
+
+	CUIRect PageBtns;
+	LeftView.HSplitTop(Spacing, nullptr, &LeftView);
+	LeftView.HSplitTop(InputHeight, &PageBtns, &LeftView);
+
+	CUIRect AddPageRect, RemovePageRect;
+	PageBtns.VSplitMid(&AddPageRect, &RemovePageRect);
+	AddPageRect.VSplitRight(Spacing / 2, &AddPageRect, nullptr);
+	RemovePageRect.VSplitLeft(Spacing / 2, nullptr, &RemovePageRect);
+
+	static CButtonContainer s_AddPageButton, s_RemovePageButton;
+	if(DoButton_Menu(&s_AddPageButton, "Add Page", 0, &AddPageRect))
+		GameClient()->m_FexQuickActions.AddPage(s_aPageName);
+	if(DoButton_Menu(&s_RemovePageButton, "Remove Page", 0, &RemovePageRect))
+		GameClient()->m_FexQuickActions.RemovePage(s_SelectedPageIndex);
+
+	LeftView.HSplitTop(Margin, nullptr, &LeftView);
+
+	LeftView.HSplitTop(InputHeight, &LabelRect, &LeftView);
+	Ui()->DoLabel(&LabelRect, "Action Name:", 14.0f, TEXTALIGN_ML);
+	LeftView.HSplitTop(InputHeight, &EditRect, &LeftView);
+	static CLineInput s_ActionInput;
+	s_ActionInput.SetBuffer(s_aActionName, sizeof(s_aActionName));
+	Ui()->DoEditBox(&s_ActionInput, &EditRect, 12.0f);
+
+	LeftView.HSplitTop(Spacing, nullptr, &LeftView);
+	LeftView.HSplitTop(InputHeight, &LabelRect, &LeftView);
+	Ui()->DoLabel(&LabelRect, "Action Command:", 14.0f, TEXTALIGN_ML);
+	LeftView.HSplitTop(InputHeight, &EditRect, &LeftView);
+	static CLineInput s_CommandInput;
+	s_CommandInput.SetBuffer(s_aActionCommand, sizeof(s_aActionCommand));
+	Ui()->DoEditBox(&s_CommandInput, &EditRect, 12.0f);
+
+	CUIRect ActionBtns;
+	LeftView.HSplitTop(Spacing, nullptr, &LeftView);
+	LeftView.HSplitTop(InputHeight, &ActionBtns, &LeftView);
+
+	CUIRect AddActionRect, RemoveActionRect;
+	ActionBtns.VSplitMid(&AddActionRect, &RemoveActionRect);
+	AddActionRect.VSplitRight(Spacing / 2, &AddActionRect, nullptr);
+	RemoveActionRect.VSplitLeft(Spacing / 2, nullptr, &RemoveActionRect);
+
+	static CButtonContainer s_AddActionButton, s_RemoveActionButton;
+	if(DoButton_Menu(&s_AddActionButton, "Add Action", 0, &AddActionRect))
+		GameClient()->m_FexQuickActions.AddActionToPage(s_SelectedPageIndex, s_aActionName, s_aActionCommand);
+	if(DoButton_Menu(&s_RemoveActionButton, "Remove Action", 0, &RemoveActionRect))
+		GameClient()->m_FexQuickActions.RemoveActionFromPage(s_SelectedPageIndex, 0);
 }

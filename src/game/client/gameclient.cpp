@@ -125,7 +125,6 @@ void CGameClient::OnConsoleInit()
 		// Handle error appropriately
 	}
 
-
 	// make a list of all the systems, make sure to add them in the correct render order
 	m_vpAll.insert(m_vpAll.end(), {&m_Skins,
 					      &m_Skins7,
@@ -153,6 +152,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Players,
 					      &m_MapLayersForeground,
 						  &m_Outlines,
+						  &m_Pets,
 					      &m_Particles.m_RenderExplosions,
 					      &m_NamePlates,
 					      &m_Particles.m_RenderExtra,
@@ -162,6 +162,7 @@ void CGameClient::OnConsoleInit()
 						  &m_PlayerIndicator,
 						  &m_Fex,
 					      &m_Hud,
+						  &m_FexQuickActions,
 					      &m_Spectator,
 					      &m_Emoticon,
 						  &m_Bindchat,
@@ -183,7 +184,6 @@ void CGameClient::OnConsoleInit()
 
 						  &m_FreezeKill,
 						  &m_Update,
-						  &m_FexUpdater,
 						  &m_Translate,
 
 					      &CMenus::m_Binder,
@@ -197,6 +197,7 @@ void CGameClient::OnConsoleInit()
 						  &m_Chat, // chat has higher prio, due to that you can quit it by pressing esc
 						  &m_Motd, // for pressing esc to remove it
 						  &m_Spectator,
+						  &m_FexQuickActions,
 						  &m_Emoticon,
 						  &m_Bindwheel,
 						  &m_Menus,
@@ -301,121 +302,8 @@ void CGameClient::OnConsoleInit()
     Console()->Register("+enemy_score", "", CFGFLAG_CLIENT, ConAddEnemyScore, this, "Add score for enemy");
 	Console()->Register("draw_score", "", CFGFLAG_CLIENT, ConDrawScore, this, "Scores are draw");
 	Console()->Register("remove_score", "", CFGFLAG_CLIENT, ConRemoveScore, this, "Accidental score can be withdrawed");
-
-	Console()->Register("t", "?i[use_id] s[name/id] s[langcode] r[message]", CFGFLAG_CLIENT, ConTranslate, this, "Translate chat message");
-	Console()->Register("lc", "?s[on/off] s[langcode]", CFGFLAG_CLIENT, ConLanguageChat, this, "Configure auto-translation");
 }
 
-void CGameClient::ConTranslate(IConsole::IResult* pResult, void* pUserData)
-{
-    CGameClient* pClient = static_cast<CGameClient*>(pUserData);
-    
-    bool UseId = false;
-    const char* pTarget;
-    const char* pLangCode;
-    const char* pMsg;
-    
-    if(pResult->NumArguments() == 3)
-    {
-        // .t <name/id> <langcode> <message>
-        pTarget = pResult->GetString(0);
-        pLangCode = pResult->GetString(1);
-        pMsg = pResult->GetString(2);
-    }
-    else if(pResult->NumArguments() == 4)
-    {
-        // .t <use_id> <name/id> <langcode> <message>
-        UseId = pResult->GetInteger(0) != 0;
-        pTarget = pResult->GetString(1);
-        pLangCode = pResult->GetString(2);
-        pMsg = pResult->GetString(3);
-    }
-    else
-    {
-        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Usage: .t [use_id] <name/id> <langcode> <message>");
-        return;
-    }
-
-    int TargetID = -1;
-    if(UseId)
-    {
-        TargetID = str_toint(pTarget);
-        if(TargetID < 0 || TargetID >= MAX_CLIENTS)
-        {
-            pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Invalid client ID");
-            return;
-        }
-    }
-    else
-    {
-        TargetID = pClient->GetClientId(pTarget);
-        if(TargetID == -1)
-        {
-            pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Could not find player");
-            return;
-        }
-    }
-
-    if(!pClient->m_aClients[TargetID].m_Active)
-    {
-        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Player not active");
-        return;
-    }
-
-    const char* pTranslated = CTranslator::Translate(pMsg, pLangCode);
-    if(str_comp(pTranslated, "Translation failed") == 0)
-    {
-        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", "Translation failed");
-        return;
-    }
-
-    pClient->m_Chat.SendChat(0, pTranslated);
-    pClient->m_LastTranslatedClientId = TargetID;
-}
-
-void CGameClient::ConLanguageChat(IConsole::IResult* pResult, void* pUserData)
-{
-    CGameClient* pClient = static_cast<CGameClient*>(pUserData);
-    TranslationSettings& Settings = pClient->m_TranslationSettings[pClient->m_Snap.m_LocalClientId];
-
-    if(pResult->NumArguments() == 0)
-    {
-        char aBuf[128];
-        str_format(aBuf, sizeof(aBuf), "Auto-translation is %s. Language: %s", 
-            Settings.Enabled ? "enabled" : "disabled", 
-            Settings.aTargetLang);
-        pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", aBuf);
-        return;
-    }
-
-    if(pResult->NumArguments() >= 1)
-    {
-        const char* pEnabled = pResult->GetString(0);
-        if(str_comp_nocase(pEnabled, "on") == 0)
-            Settings.Enabled = true;
-        else if(str_comp_nocase(pEnabled, "off") == 0)
-            Settings.Enabled = false;
-        else
-            Settings.Enabled = !Settings.Enabled; // Toggle if not specified
-    }
-
-    if(pResult->NumArguments() >= 2)
-    {
-        const char* pLang = pResult->GetString(1);
-        str_copy(Settings.aTargetLang, pLang, sizeof(Settings.aTargetLang));
-    }
-    else if(Settings.aTargetLang[0] == 0)
-    {
-        // Set default language if none specified
-        str_copy(Settings.aTargetLang, "en", sizeof(Settings.aTargetLang));
-    }
-
-    char aBuf[128];
-    str_format(aBuf, sizeof(aBuf), "Auto-translation %s. Language set to: %s", 
-        Settings.Enabled ? "enabled" : "disabled", 
-        Settings.aTargetLang);
-    pClient->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "translate", aBuf);
-}
 
 static void GenerateTimeoutCode(char *pTimeoutCode)
 {
@@ -1513,34 +1401,14 @@ void CGameClient::OnMessage(int MsgId, CUnpacker *pUnpacker, int Conn, bool Dumm
 		{
 			CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
 
-			// First handle translation
-			LastMessageInfo& Info = m_LastMessages[pMsg->m_ClientId];
-			str_copy(Info.aMessage, pMsg->m_pMessage, sizeof(Info.aMessage));
-			Info.Time = time_get();
-
-			auto it = m_TranslationMap.find(pMsg->m_ClientId);
-			if(it != m_TranslationMap.end() && pMsg->m_ClientId != m_Snap.m_LocalClientId)
-			{
-				const char* pTargetLang = GetLanguageFromFilename(g_Config.m_ClLanguagefile);
-				const char* pTranslated = CTranslator::Translate(pMsg->m_pMessage, pTargetLang);
-				if(str_comp(pTranslated, "Translation failed") != 0)
-				{
-					str_copy(Info.aLanguage, it->second.aLanguage, sizeof(Info.aLanguage));
-
-					char aBuf[512];
-					str_format(aBuf, sizeof(aBuf), "[%s] %s", m_aClients[pMsg->m_ClientId].m_aName, pTranslated);
-					m_Chat.AddLine(-4, pMsg->m_Team, aBuf);
-				}
-			}
-
-			// Original team chat handling
-			if((pMsg->m_Team == 1 && (m_aClients[m_aLocalIds[0]].m_Team != m_aClients[m_aLocalIds[1]].m_Team || 
-			m_Teams.Team(m_aLocalIds[0]) != m_Teams.Team(m_aLocalIds[1]))) || pMsg->m_Team > 1)
+			if(pMsg->m_Team == 1 &&
+			(m_aClients[m_aLocalIds[0]].m_Team != m_aClients[m_aLocalIds[1]].m_Team ||
+				m_Teams.Team(m_aLocalIds[0]) != m_Teams.Team(m_aLocalIds[1])))
 			{
 				m_Chat.OnMessage(MsgId, pRawMsg);
 			}
 		}
-		return; // no need of all that stuff for the dummy
+		return; // end dummy branch.
 	}
 
 	// TODO: this should be done smarter

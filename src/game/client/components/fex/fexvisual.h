@@ -64,6 +64,20 @@ public:
         ColorRGBA m_VisualColor = ColorRGBA(1, 1, 1, 1);
     };
 
+    class CPetColors
+    {
+    public:
+        enum COLORMODES
+        {
+            COLORMODE_RAINBOW = 1,
+            COLORMODE_PULSE,
+            COLORMODE_CUSTOM,
+            COLORMODE_RANDOM
+        };
+    
+        ColorRGBA m_VisualColor = ColorRGBA(1, 1, 1, 1);
+    };
+
     CWeaponCols m_Weapon;
     CHookCols m_Hook;
     CTeesCols m_Tees;

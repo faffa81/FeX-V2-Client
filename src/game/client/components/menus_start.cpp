@@ -171,6 +171,11 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	}
 
 	Menu.HSplitBottom(40.0f, &Menu, &Button);
+	static CButtonContainer s_ThankYouButton;
+	if(DoButton_Menu(&s_ThankYouButton, Localize("Credits"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, ColorA) || CheckHotKey(KEY_C))
+		NewPage = PAGE_CREDITS;
+
+	Menu.HSplitBottom(40.0f, &Menu, &Button);
 	static CButtonContainer s_QuitButton;
 	bool UsedEscape = false;
 	if(DoButton_Menu(&s_QuitButton, Localize("Quit"), 0, &Button, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, Rounding / scale, 0.5f, ColorA) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
@@ -270,9 +275,9 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	str_format(DDNETRL, sizeof(DDNETRL), Localize("%s: %s"), GAME_NAME, GAME_RELEASE_VERSION);
 	char FEXRL[128];
 	str_format(FEXRL, sizeof(FEXRL), Localize("%s: %s"), CLIENT_NAME, FEX_RELEASE_VERSION);
-	Ui()->DoLabel(&CurVersion, DDNETRL, 12.0f / scale, TEXTALIGN_LEFT);
+	Ui()->DoLabel(&CurVersion, DDNETRL, 12.0f / scale, TEXTALIGN_MR);
 	CurVersion.HSplitTop(20.0f / scale, nullptr, &CurVersion);
-	Ui()->DoLabel(&CurVersion, FEXRL, 12.0f / scale, TEXTALIGN_LEFT);
+	Ui()->DoLabel(&CurVersion, FEXRL, 12.0f / scale, TEXTALIGN_MR);
 
 	static CButtonContainer s_VersionButton;
 	if(DoButton_Menu(&s_VersionButton, Localize("FeX Versions"), 0, &VersionButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f / scale, 0.0f, ColorA))
@@ -300,7 +305,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 
 	char aBuf[128];
 	const IUpdater::EUpdaterState State = Updater()->GetCurrentState();
-	const bool NeedUpdate = str_comp(Client()->LatestVersion(), "0");
+	const bool NeedUpdate = str_comp(GameClient()->m_Update.m_aVersionStr, "0");
 
 	if(State == IUpdater::CLEAN && NeedUpdate)
 	{
@@ -325,7 +330,7 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 
 	if(State == IUpdater::CLEAN && NeedUpdate)
 	{
-		str_format(aBuf, sizeof(aBuf), Localize("DDNet %s is out!"), Client()->LatestVersion());
+		str_format(aBuf, sizeof(aBuf), Localize("FeX %s is out!"), GameClient()->m_Update.m_aVersionStr);
 		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
 	else if(State == IUpdater::CLEAN)
@@ -351,26 +356,26 @@ void CMenus::RenderStartMenu(CUIRect MainView)
 	Ui()->DoLabel(&VersionUpdate, aBuf, 14.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(TextRender()->DefaultTextColor());
 #endif
-	if(str_comp(GameClient()->m_Update.m_aVersionStr, "0") != 0)
-	{
-		// CUIRect ManualButton, AutoButton;
-		// VersionUpdate.VSplitMid(&ManualButton, &AutoButton);
+	// if(str_comp(GameClient()->m_Update.m_aVersionStr, "0") != 0)
+	// {
+	// 	// CUIRect ManualButton, AutoButton;
+	// 	// VersionUpdate.VSplitMid(&ManualButton, &AutoButton);
 
-		char aBuf[64];
-		str_format(aBuf, sizeof(aBuf), Localize("FeX v%s is out!"), GameClient()->m_Update.m_aVersionStr);
+	// 	char aBuf[64];
+	// 	str_format(aBuf, sizeof(aBuf), Localize("FeX v%s is out!"), GameClient()->m_Update.m_aVersionStr);
 
-		static CButtonContainer s_ManualUpdate;
-		if(DoButton_Menu(&s_ManualUpdate, Localize(aBuf), 0, &VersionUpdate, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
-		{
-			Client()->ViewLink("https://github.com/faffa81/FeX-V2-Client/releases/latest");
-		}
+	// 	static CButtonContainer s_ManualUpdate;
+	// 	if(DoButton_Menu(&s_ManualUpdate, Localize(aBuf), 0, &VersionUpdate, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
+	// 	{
+	// 		Client()->ViewLink("https://github.com/faffa81/FeX-V2-Client/releases/latest");
+	// 	}
 
-		// static CButtonContainer s_AutoUpdate;
-		// if(DoButton_Menu(&s_AutoUpdate, Localize("Auto Update"), 0, &AutoButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
-		// {
-		// 	GameClient()->m_FexUpdater.InitiateUpdate();
-		// }
-	}
+	// 	// static CButtonContainer s_AutoUpdate;
+	// 	// if(DoButton_Menu(&s_AutoUpdate, Localize("Auto Update"), 0, &AutoButton, BUTTONFLAG_LEFT, 0, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorA))
+	// 	// {
+	// 	// 	GameClient()->m_FexUpdater.InitiateUpdate();
+	// 	// }
+	// }
 
 	if(NewPage != -1)
 	{

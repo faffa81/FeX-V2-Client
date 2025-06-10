@@ -1943,7 +1943,7 @@ void CMenus::RenderServerbrowserWars(CUIRect View)
 
 				CUIRect NameRect, InfoRect;
 				Rect.HSplitMid(&NameRect, &InfoRect);
-				CUIRect IconRect, Temp;
+				CUIRect IconRect, Temp, TextRect;
 				float IconSize = 16.0f;
 				NameRect.VSplitLeft(IconSize, &IconRect, &Temp);
 
@@ -1966,35 +1966,95 @@ void CMenus::RenderServerbrowserWars(CUIRect View)
 					Graphics()->QuadsEnd();
 				}
 
-				CUIRect SkinRect;
-				float SkinSlotSize = 16.0f;
-				Temp.VSplitLeft(SkinSlotSize, &SkinRect, &NameRect);
+				CUIRect SkinRect, NameClanRect;
+				float SkinSize = 32.0f;  // Increased size for skin
+				Temp.VSplitLeft(SkinSize, &SkinRect, &NameClanRect);
 
-				Ui()->DoLabel(&NameRect, (str_comp(pEntry->m_aClan, "") != 0 ? pEntry->m_aClan : pEntry->m_aName),
-							FontSize, TEXTALIGN_ML);
+				// Render tee
+				const CServerInfo *pServerInfo = pEntry->m_ServerInfo;
+				if(pServerInfo)
+				{
+					for(int c = 0; c < pServerInfo->m_NumClients; c++)
+					{
+						const CServerInfo::CClient &CurrentClient = pServerInfo->m_aClients[c];
+						if(str_comp(CurrentClient.m_aName, pEntry->m_aName) == 0 || 
+						str_comp(CurrentClient.m_aClan, pEntry->m_aClan) == 0)
+						{
+							if(CurrentClient.m_aSkin[0])
+							{
+								CTeeRenderInfo TeeInfo = GetTeeRenderInfo(
+									vec2(SkinRect.w, SkinRect.h),
+									CurrentClient.m_aSkin,
+									CurrentClient.m_CustomSkinColors,
+									CurrentClient.m_CustomSkinColorBody,
+									CurrentClient.m_CustomSkinColorFeet
+								);
 
-				char aInfo[128];
+								const CAnimState *pIdleState = CAnimState::GetIdle();
+								vec2 OffsetToMid;
+								CRenderTools::GetRenderTeeOffsetToRenderedTee(pIdleState, &TeeInfo, OffsetToMid);
+								vec2 TeeRenderPos(
+									SkinRect.x + SkinRect.w/2.0f,
+									SkinRect.y + SkinRect.h/2.0f + OffsetToMid.y
+								);
+
+								RenderTools()->RenderTee(pIdleState, &TeeInfo, EMOTE_NORMAL, vec2(1.0f, 0.0f), TeeRenderPos);
+							}
+							break;
+						}
+					}
+				}
+
+				// Name and clan
+				CUIRect NameLabel, ClanLabel;
+				NameClanRect.HSplitMid(&NameLabel, &ClanLabel);
+				
+				// Render name
+				if(str_comp(pEntry->m_aClan, "") != 0)
+				{
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					Ui()->DoLabel(&ClanLabel, pEntry->m_aClan, FontSize, TEXTALIGN_ML);
+				}
+				else 
+				{
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
+					Ui()->DoLabel(&NameLabel, pEntry->m_aName, FontSize, TEXTALIGN_ML);
+				}
+
+				// Server info
 				if(pEntry->m_ServerInfo)
 				{
-					str_format(aInfo, sizeof(aInfo), "%s [%d/%d]", 
-							pEntry->m_pWarType->m_aWarName,
-							pEntry->m_ServerInfo->m_NumPlayers,
-							pEntry->m_ServerInfo->m_MaxPlayers);
+					char aInfo[256];
+					const char *pLocation = pEntry->m_ServerInfo->m_aMap;
+					if(!pLocation[0])
+						pLocation = "Unknown";
+
+					str_format(aInfo, sizeof(aInfo), "%s | %s | %s [%d/%d]", 
+						pEntry->m_ServerInfo->m_aName,
+						pEntry->m_ServerInfo->m_aGameType,
+						pLocation,
+						pEntry->m_ServerInfo->m_NumPlayers,
+						pEntry->m_ServerInfo->m_MaxPlayers);
+
+					TextRender()->TextColor(pEntry->m_pWarType->m_Color);
+					Ui()->DoLabel(&InfoRect, aInfo, FontSize - 1.0f, TEXTALIGN_ML);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
 				}
 				else
 				{
+					// Offline player info
+					char aInfo[128];
 					str_format(aInfo, sizeof(aInfo), "%s", pEntry->m_pWarType->m_aWarName);
+					TextRender()->TextColor(pEntry->m_pWarType->m_Color);
+					Ui()->DoLabel(&InfoRect, aInfo, FontSize - 1.0f, TEXTALIGN_ML);
+					TextRender()->TextColor(TextRender()->DefaultTextColor());
 				}
-				TextRender()->TextColor(pEntry->m_pWarType->m_Color);
-				Ui()->DoLabel(&InfoRect, aInfo, FontSize - 1.0f, TEXTALIGN_ML);
-				TextRender()->TextColor(TextRender()->DefaultTextColor());
 
 				if(str_comp(pEntry->m_aReason, "") != 0)
 				{
 					GameClient()->m_Tooltips.DoToolTip(pEntry, &Rect, pEntry->m_aReason);
 				}
 			}
-
 			CUIRect Space;
 			List.HSplitTop(SpacingH, &Space, &List);
 			s_ScrollRegion.AddRect(Space);

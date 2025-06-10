@@ -72,7 +72,6 @@
 #include "components/fex/fexvisual.h"
 
 #include "components/fex/update.h"
-#include "components/fex/fexupdater.h"
 
 #include <vector>
 #include "components/fex/fextrails.h"
@@ -82,6 +81,8 @@
 #include "components/fex/fexplayerindicator.h"
 
 #include "components/fex/translator.h"
+#include "components/fex/fexpets.h"
+#include "components/fex/fexquickactions.h"
 
 class CGameInfo
 {
@@ -172,7 +173,6 @@ public:
 	mutable int64_t m_LastKillTime;
 
 	// fex components
-	CFexUpdater m_FexUpdater;
 	CFex m_Fex;
 	CBindchat m_Bindchat;
 	CSkinProfiles m_SkinProfiles;
@@ -185,7 +185,9 @@ public:
 	CBindWheel m_Bindwheel;
 	CVisual m_Visual;
 	CUpdate m_Update;
-	CTranslator m_Translate;
+	CTranslate m_Translate;
+	CPet m_Pets;
+	CActions m_FexQuickActions;
 
 	// all components	
 	CInfoMessages m_InfoMessages;
@@ -370,12 +372,6 @@ public:
 	};
 	int m_ServerMode;
 	CGameInfo m_GameInfo;
-
-	struct TranslationSettings {
-		bool Enabled;
-		char aTargetLang[8];
-	};
-	std::map<int, TranslationSettings> m_TranslationSettings;
 
 	char m_aSavedLocalRconPassword[sizeof(g_Config.m_SvRconPassword)] = "";
 
@@ -669,9 +665,6 @@ public:
 	static void ConDrawScore(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveScore(IConsole::IResult *pResult, void *pUserData);
 	void OnConsoleInit() override;
-
-	static void ConTranslate(IConsole::IResult *pResult, void *pUserData);
-	static void ConLanguageChat(IConsole::IResult *pResult, void *pUserData);
 
 	void OnStateChange(int NewState, int OldState) override;
 	template<typename T>

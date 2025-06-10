@@ -167,6 +167,67 @@ void CChat::OnStateChange(int NewState, int OldState)
 		Reset();
 }
 
+void CChat::UpdateCommandInfos()
+{
+    m_CommandInfos.clear();
+
+    // Add DDNet commands
+    for(const auto &Command : m_vCommands)
+    {
+        CCommandInfo Info;
+        Info.m_pName = Command.m_aName;
+        Info.m_pParams = Command.m_aParams;
+        Info.m_pHelp = Command.m_aHelpText; // Use m_aHelpText instead of m_pHelp
+        Info.m_IsBindChat = false;
+        m_CommandInfos.push_back(Info);
+    }
+
+    // Add bindchat commands
+    for(const auto &Bind : m_pClient->m_Bindchat.m_vBinds)
+    {
+        CCommandInfo Info;
+        Info.m_pName = Bind.m_aName; 
+        Info.m_pParams = "";
+        
+        // Get the actual console command for help text
+        char aCommand[256];
+        str_copy(aCommand, Bind.m_aCommand);
+        const char *pParams = str_find(aCommand, " ");
+        if(pParams)
+            aCommand[pParams - aCommand] = 0;
+            
+        // Fix: Add all required parameters to GetCommandInfo
+        const IConsole::CCommandInfo *pConsoleCmd = Console()->GetCommandInfo(aCommand, IConsole::ACCESS_LEVEL_USER, false);
+        Info.m_pHelp = pConsoleCmd ? pConsoleCmd->m_pHelp : "No help available";
+        Info.m_IsBindChat = true;
+        
+        m_CommandInfos.push_back(Info);
+    }
+}
+
+bool CChat::GetCommandInfo(const char *pInput, CCommandInfo *pInfo)
+{
+    if(!pInput || pInput[0] == 0)
+        return false;
+
+    // Skip the command prefix (. or ! or /)
+    const char *pCmd = pInput + 1;
+    if(pInput[0] != '.' && pInput[0] != '!' && pInput[0] != '/')
+        return false;
+
+    // Find matching command
+    for(const auto &Info : m_CommandInfos)
+    {
+        if(str_startswith_nocase(Info.m_pName, pCmd))
+        {
+            *pInfo = Info;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void CChat::ConSay(IConsole::IResult *pResult, void *pUserData)
 {
 	((CChat *)pUserData)->SendChat(0, pResult->GetString(0));
@@ -432,9 +493,33 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 		{
 			// find next possible name
 			const char *pCompletionString = nullptr;
-			if(m_PlayerCompletionListLength > 0)
+			
+			// Check if input is a number for client ID matching
+			char aBuffer[16];
+			str_truncate(aBuffer, sizeof(aBuffer), m_Input.GetString() + m_PlaceholderOffset, m_PlaceholderLength);
+			
+			bool IsNumber = true;
+			for(int i = 0; aBuffer[i]; i++)
 			{
-				// We do this in a loop, if a player left the game during the repeated pressing of Tab, they are skipped
+				if(!isdigit(aBuffer[i]))
+				{
+					IsNumber = false;
+					break;
+				}
+			}
+
+			if(IsNumber && aBuffer[0] != '\0')
+			{
+				// Try to complete based on client ID
+				int RequestedId = str_toint(aBuffer);
+				if(RequestedId >= 0 && RequestedId < MAX_CLIENTS && m_pClient->m_aClients[RequestedId].m_Active)
+				{
+					pCompletionString = m_pClient->m_aClients[RequestedId].m_aName;
+				}
+			}
+			else if(m_PlayerCompletionListLength > 0)
+			{
+				// Existing name completion logic
 				CGameClient::CClientData *pCompletionClientData;
 				for(int i = 0; i < m_PlayerCompletionListLength; ++i)
 				{
@@ -464,7 +549,7 @@ bool CChat::OnInput(const IInput::CEvent &Event)
 				}
 			}
 
-			// insert the name
+			// Rest of the code remains the same
 			if(pCompletionString)
 			{
 				char aBuf[MAX_LINE_LENGTH];
@@ -1008,33 +1093,100 @@ void CChat::InitFexCommands() {
 
 void CChat::OnMessage(int MsgType, void *pRawMsg)
 {
-	if(m_pClient->m_SuppressEvents)
-		return;
-
+    if(m_pClient->m_SuppressEvents)
+	{
+        return;
+	}
 
 	if(MsgType == NETMSGTYPE_SV_CHAT)
 	{
 		CNetMsg_Sv_Chat *pMsg = (CNetMsg_Sv_Chat *)pRawMsg;
+
+		char aLangCode[6] = {0};
+		const char *pMessageStart = pMsg->m_pMessage;
+		bool HasLangCode = false;
+
+		int msgLen = str_length(pMsg->m_pMessage);
+		if(msgLen >= 4 && pMsg->m_pMessage[0] == '[')
+		{
+			if(pMsg->m_pMessage[3] == ']')
+			{
+				aLangCode[0] = pMsg->m_pMessage[1];
+				aLangCode[1] = pMsg->m_pMessage[2];
+				aLangCode[2] = 0;
+				pMessageStart += 4;
+				HasLangCode = true;
+			}
+			else if(msgLen >= 5 && pMsg->m_pMessage[4] == ']')
+			{
+				aLangCode[0] = pMsg->m_pMessage[1];
+				aLangCode[1] = pMsg->m_pMessage[2];
+				aLangCode[2] = pMsg->m_pMessage[3];
+				aLangCode[3] = 0;
+				pMessageStart += 5;
+				HasLangCode = true;
+			}
+		}
+
+		bool ShouldTranslate = g_Config.m_ClAutoTranslate;
+		if(HasLangCode)
+		{
+			if(str_comp_nocase(aLangCode, g_Config.m_ClAutoTranslateLang) == 0)
+				ShouldTranslate = false;
+		}
+
+		if(pMsg->m_ClientId < 0)
+			ShouldTranslate = false;
+		else if(pMsg->m_ClientId == m_pClient->m_Snap.m_LocalClientId)
+			ShouldTranslate = false;
+		else if(g_Config.m_ClDummy && m_pClient->m_aLocalIds[1] >= 0 && pMsg->m_ClientId == m_pClient->m_aLocalIds[1])
+			ShouldTranslate = false;
+
+		if(ShouldTranslate)
+		{
+			TranslationRequest req;
+			req.Sender = pMsg->m_ClientId;
+			req.Team = pMsg->m_Team;
+			req.IsWhisper = false;
+			req.Auto = true;
+			
+			str_copy(req.aMessage, pMessageStart, sizeof(req.aMessage));
+			str_copy(req.aTargetLang, g_Config.m_ClAutoTranslateLang, sizeof(req.aTargetLang));
+			
+			req.HasSourceLang = HasLangCode;
+			if(HasLangCode)
+				str_copy(req.aSourceLang, aLangCode, sizeof(req.aSourceLang));
+			else
+				req.aSourceLang[0] = 0;
+			
+			m_pClient->m_Translate.QueueTranslation(req);
+		}
+		else
+		{
+			AddLine(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage);
+		}
+		
 		OnChatMessage(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage);
 		ChatDetection(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage);
-		AddLine(pMsg->m_ClientId, pMsg->m_Team, pMsg->m_pMessage);
 	}
 
-	else if(MsgType == NETMSGTYPE_SV_COMMANDINFO)
-	{
-		CNetMsg_Sv_CommandInfo *pMsg = (CNetMsg_Sv_CommandInfo *)pRawMsg;
-		if(!m_ServerSupportsCommandInfo)
-		{
-			m_vCommands.clear();
-			m_ServerSupportsCommandInfo = true;
-		}
-		RegisterCommand(pMsg->m_pName, pMsg->m_pArgsFormat, pMsg->m_pHelpText);
-	}
-	else if(MsgType == NETMSGTYPE_SV_COMMANDINFOREMOVE)
-	{
-		CNetMsg_Sv_CommandInfoRemove *pMsg = (CNetMsg_Sv_CommandInfoRemove *)pRawMsg;
-		UnregisterCommand(pMsg->m_pName);
-	}
+
+
+    else if(MsgType == NETMSGTYPE_SV_COMMANDINFO)
+    {
+        CNetMsg_Sv_CommandInfo *pMsg = (CNetMsg_Sv_CommandInfo *)pRawMsg;
+        if(!m_ServerSupportsCommandInfo)
+        {
+            m_vCommands.clear();
+            m_ServerSupportsCommandInfo = true;
+        }
+        RegisterCommand(pMsg->m_pName, pMsg->m_pArgsFormat, pMsg->m_pHelpText);
+    }
+    else if(MsgType == NETMSGTYPE_SV_COMMANDINFOREMOVE)
+    {
+        CNetMsg_Sv_CommandInfoRemove *pMsg = (CNetMsg_Sv_CommandInfoRemove *)pRawMsg;
+        UnregisterCommand(pMsg->m_pName);
+    }
 }
 
 bool CChat::LineShouldHighlight(const char *pLine, const char *pName)
@@ -1164,6 +1316,16 @@ void CChat::AddLine(int ClientId, int Team, const char *pLine)
 					  (m_pClient->m_Snap.m_LocalClientId != ClientId && m_pClient->m_aClients[ClientId].m_Foe))))
 		return;
 
+
+	if(str_find_nocase(pLine, "You are now out of the solo part") && ClientId == SERVER_MSG && g_Config.m_ClSoloHud)
+	{
+		return;
+	}
+
+	if(str_find_nocase(pLine, "You are now in a solo part") && ClientId == SERVER_MSG && g_Config.m_ClSoloHud)
+	{
+		return;
+	}
 	// trim right and set maximum length to 256 utf8-characters
 	int Length = 0;
 	const char *pStr = pLine;
@@ -1732,14 +1894,14 @@ void CChat::OnRender()
 	Graphics()->MapScreen(0.0f, 0.0f, Width, Height);
 
 	float x = 5.0f;
-	float y = 300.0f - 20.0f * FontSize() / 6.0f;
+	float y = 300.0f - (20.0f * FontSize() / 6.f + (g_Config.m_ClStatusBar ? g_Config.m_ClStatusBarHeight : 0));
 	float ScaledFontSize = FontSize() * (8.0f / 6.0f);
 	if(m_Mode != MODE_NONE)
 	{
 		// render chat input
 		CTextCursor Cursor;
 		TextRender()->SetCursor(&Cursor, x, y, ScaledFontSize, TEXTFLAG_RENDER);
-		Cursor.m_LineWidth = Width - 190.0f;
+		Cursor.m_LineWidth = std::max(Width - 190.0f, 190.0f);
 
 		if(m_Mode == MODE_ALL)
 			TextRender()->TextEx(&Cursor, Localize("All"));
@@ -1818,8 +1980,6 @@ void CChat::OnRender()
 				}
 			}
 		}
-
-
 	}
 
 #if defined(CONF_VIDEORECORDER)

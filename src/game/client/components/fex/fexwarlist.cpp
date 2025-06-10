@@ -24,7 +24,7 @@ void CWarList::OnConsoleInit()
 
 	Console()->Register("update_war_group", "i[group_index] s[name] i[color]", CFGFLAG_CLIENT, ConUpsertWarType, this, "Update or add a specific war group");
 	Console()->Register("add_war_entry", "s[group] s[name] s[clan] r[reason]", CFGFLAG_CLIENT, ConAddWarEntry, this, "Adds a specific war entry");
-	Console()->Register("add_mute", "s[name]", CFGFLAG_CLIENT, ConAddMuteEntry, this, "Remove a clan war entry"); // E-Client [Mutes]
+	Console()->Register("add_mute", "s[name]", CFGFLAG_CLIENT, ConAddMuteEntry, this, "Add player to mute"); // E-Client [Mutes]
 
 	Console()->Register("war_name", "s[group] s[name] ?r[reason]", CFGFLAG_CLIENT, ConName, this, "Add a name war entry");
 	Console()->Register("war_clan", "s[group] s[clan] ?r[reason]", CFGFLAG_CLIENT, ConClan, this, "Add a clan war entry");
@@ -38,8 +38,8 @@ void CWarList::OnConsoleInit()
 	Console()->Register("remove_war_clan_index", "s[group_index] s[name]", CFGFLAG_CLIENT, ConRemoveClanIndex, this, "Remove a clan war entry");
 
 	// E-Client [Mutes]
-	Console()->Register("addmute", "s[name]", CFGFLAG_CLIENT, ConAddMute, this, "Remove a clan war entry");
-	Console()->Register("delmute", "s[name]", CFGFLAG_CLIENT, ConDelMute, this, "Removes a Muted Name");
+	Console()->Register("addmute", "s[name]", CFGFLAG_CLIENT, ConAddMute, this, "Add Name to mute");
+	Console()->Register("delmute", "s[name]", CFGFLAG_CLIENT, ConDelMute, this, "Remove Name from mute");
 
 	m_pStorage = Kernel()->RequestInterface<IStorage>();
 	IOHANDLE File = m_pStorage->OpenFile(WARLIST_FILE, IOFLAG_READ, IStorage::TYPE_ALL);
@@ -161,6 +161,44 @@ void CWarList::ConDelMute(IConsole::IResult *pResult, void *pUserData)
 	const char *pName = pResult->GetString(0);
 	CWarList *pThis = static_cast<CWarList *>(pUserData);
 	pThis->DelMute(pName);
+}
+
+bool CWarList::IsInList(const char *pName, const char *pClan, const char *pType)
+{
+    CWarType *pWarType = FindWarType(pType);
+    if(!pWarType)
+        return false;
+
+    // Search for matching entry
+    for(auto &Entry : m_WarEntries)
+    {
+        if(Entry.m_pWarType == pWarType)
+        {
+            if(str_comp(pName, "") != 0 && str_comp(Entry.m_aName, pName) == 0)
+                return true;
+            if(str_comp(pClan, "") != 0 && str_comp(Entry.m_aClan, pClan) == 0) 
+                return true;
+        }
+    }
+
+    return false;
+}
+
+void CWarList::RemoveWarEntry(const char *pName, const char *pClan)
+{
+    // Find and remove all matching entries
+    auto it = std::remove_if(m_WarEntries.begin(), m_WarEntries.end(),
+        [pName, pClan](const CWarEntry &Entry) {
+            bool NameMatch = str_comp(Entry.m_aName, pName) == 0 && str_comp(pName, "") != 0;
+            bool ClanMatch = str_comp(Entry.m_aClan, pClan) == 0 && str_comp(pClan, "") != 0;
+            return NameMatch || ClanMatch;
+        });
+
+    if(it != m_WarEntries.end())
+    {
+        m_WarEntries.erase(it, m_WarEntries.end());
+        OnWarEntryChange();
+    }
 }
 
 void CWarList::AddWarEntryInGame(int WarType, const char *pName, const char *pReason, bool IsClan)

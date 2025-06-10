@@ -74,9 +74,6 @@ public:
 	static void ConUnTempMute(IConsole::IResult *pResult, void *pUserData);
 
 
-private:
-    static constexpr const char* SPECIAL_CLAN = "ɢαиsτα";
-
 public:
 	// Temporary War Entries
 	std::vector<CTempEntry> m_TempEntries;
@@ -85,8 +82,6 @@ public:
 	void RemoveWarEntryDuplicates(const char *pName);
 	void RemoveWarEntry(int Type, const char *pName);
     virtual void OnConsoleInit() override;
-    void ProcessAutoMessage();
-    void DisplayRandomClans();
     virtual void OnRender() override;
     static void ConOnlineInfo(IConsole::IResult *pResult, void *pUserData);
     static void ConPlayerInfo(IConsole::IResult *pResult, void *pUserData);
@@ -95,22 +90,24 @@ public:
     int IdWithName(const char *pName);
     void PlayerInfo(const char *pName);
 
+    const char* NameFromId(int ID);
 
-	// FeX Autojoins
-	// int64_t m_AutoJoinTeamTick;
-	int64_t m_AutoJoinDummyTick;
-	bool m_OnAttemptingDummyJoin;
-	int m_LastPlayerCount;
-	// bool m_AutoJoinTeamAttempted;
-	bool m_AutoJoinDummyAttempted;
-	bool m_ServerJustJoined;
-	int64_t m_AutoJoinDummySwitchTick;
-	bool m_FirstTimerExpired = false;
-	bool m_HasSwitchedBack = false;
-	void CheckPlayerLeave();
+    // FeX Autojoins
+	bool m_FirstDummyAttempted;
+    int64_t m_AutoJoinTeamTick;
+    int64_t m_AutoJoinDummyTick;
+    bool m_OnAttemptingDummyJoin;
+    int m_LastPlayerCount;
+    bool m_AutoJoinTeamAttempted;
+    bool m_AutoJoinDummyAttempted;
+    bool m_ServerJustJoined;
+    int64_t m_AutoJoinDummySwitchTick;
+    bool m_FirstTimerExpired = false;
+    bool m_HasSwitchedBack = false;
+    void CheckPlayerLeave();
 
 private:
-	virtual int Sizeof() const override { return sizeof(*this); }
+    virtual int Sizeof() const override { return sizeof(*this); }
     virtual void OnNewSnapshot() override;
     virtual void OnInit() override;
     virtual void OnStateChange(int NewState, int OldState) override;

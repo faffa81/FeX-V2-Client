@@ -31,6 +31,8 @@ MACRO_CONFIG_INT(ClShowOwnMenuToOthers, fx_show_self_in_menu, 1, 0, 1, CFGFLAG_C
 
 MACRO_CONFIG_INT(ClSpectatorActionHud, fx_spectator_action_hud, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show spectator action HUD")
 MACRO_CONFIG_INT(ClSpectatorActionIcons, fx_spectator_action_icons, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show icons instead of text in spectator action HUD")
+MACRO_CONFIG_INT(ClSpectatorActionAnimation, fx_spectator_action_animation, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Animation for opening this HUD: 0=direct, 1=fade in, 2=scale to size")
+MACRO_CONFIG_STR(ClSpectatorActionVoteReason, fx_spectator_action_reason, 15, "FeX Vote", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Votekick reason for quick vote(max length 15)")
 
 MACRO_CONFIG_INT(ClShowFeXIcon, fx_show_fex_icon, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show FeX icon in scoreboard")
 MACRO_CONFIG_INT(ClAllowOthersSeeFex, fx_allow_others_see_fex, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow others to see that you're using FeX client")
@@ -43,6 +45,10 @@ MACRO_CONFIG_INT(ClPingNameCircle, fx_nameplate_ping_circle, 0, 0, 1, CFGFLAG_CL
 // MACRO_CONFIG_INT(ClScaleMouseDistance, fx_scale_mouse_distance, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Improve mouse precision by scaling max distance to 1000")
 
 // MACRO_CONFIG_INT(ClHammerRotatesWithCursor, fx_hammer_rotates_with_cursor, 0, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Allow your hammer to rotate like other weapons")
+
+MACRO_CONFIG_INT(ClDummyDeepFly, fx_dummy_deepfly, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable dummy deepfly[shoot to hammer with dummy]")
+MACRO_CONFIG_INT(ClDummyDeepFlyMode, fx_dummy_deepfly_mode, 2, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Dummy Deepfly mode: 1=shoot, 2=hammer, 3=laser, 4=shotgun")
+MACRO_CONFIG_INT(ClDummyTrippleFly, fx_dummy_tripplefly, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable dummy tripplefly[shoot to hammer with dummy and hook where cursor is]")
 
 // FeX Freeze Kill
 
@@ -62,7 +68,7 @@ MACRO_CONFIG_INT(ClFreezeKillColorY, fx_freeze_kill_color_y, 1, 0, 1, CFGFLAG_CL
 MACRO_CONFIG_INT(ClFreezeKillDebug, fx_freeze_kill_debug, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "debug")
 
 // Auto join stuff
-MACRO_CONFIG_INT(ClAutoJoinTeam, fx_autojoin_team, 0, 1, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto join this team when joining server")
+MACRO_CONFIG_INT(ClAutoJoinTeam, fx_autojoin_team, 0, 0, 63, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto join this team when joining server")
 MACRO_CONFIG_INT(ClAutoJoinTeamDelay, fx, 2, 0, 20, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Delay in seconds before auto joining team")
 MACRO_CONFIG_INT(ClAutoJoinTeamLock, fx_autojoin_team_lock, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Lock to team after auto joining")
 
@@ -104,7 +110,7 @@ MACRO_CONFIG_INT(ClAutoReplyTabbedOut, fx_auto_reply_tabbed_out, 0, 0, 1, CFGFLA
 MACRO_CONFIG_STR(ClAutoReplyMsgPinged, fx_auto_reply_msg_pinged, 255, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Reply to players who pinged you")
 MACRO_CONFIG_INT(ClAutoReplyPinged, fx_auto_reply_pinged, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Message to reply when pinged in chat and fx_auto_reply is set to 1")
 
-// FeX Skin Profiles(TATER MY WALLAH)
+// FeX Skin Profiles
 
 MACRO_CONFIG_INT(ClApplyProfileSkin, fx_profile_skin, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Apply skin in profiles")
 MACRO_CONFIG_INT(ClApplyProfileName, fx_profile_name, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Apply name in profiles")
@@ -202,10 +208,11 @@ MACRO_CONFIG_INT(ClAlreadyCloned, zzzzzzjwebgfuwhbfuewhuif______, 0, 0, 1, CFGFL
 // FeX Visual
 //------------------------
 MACRO_CONFIG_INT(ClVisualSpeed, fx_visual_speed, 100, 1, 5000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Adjust speed of the visual speed")
-MACRO_CONFIG_INT(ClVisualModeT, fx_visual_modeT, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Tee] mode (1: rainbow, 2: pulse, 3: custom color, 4: random)")
-MACRO_CONFIG_INT(ClVisualModeW, fx_visual_modeW, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Weapon] mode (1: rainbow, 2: pulse, 3: custom color, 4: random)")
-MACRO_CONFIG_INT(ClVisualModeH, fx_visual_modeH, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Hook] mode (1: rainbow, 2: pulse, 3: custom color, 4: random)")
-MACRO_CONFIG_INT(ClVisualModeC, fx_visual_modeC, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Cursor] mode (1: rainbow, 2: pulse, 3: custom color, 4: random)")
+MACRO_CONFIG_INT(ClVisualModeTee, fx_visual_mode_tee, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Tee] mode (1: rainbow, 2: pulse, 3: custom color, 4: random, 5: custom)")
+MACRO_CONFIG_INT(ClVisualModeWeapon, fx_visual_mode_weapon, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Weapon] mode (1: rainbow, 2: pulse, 3: custom color, 4: random, 5: custom)")
+MACRO_CONFIG_INT(ClVisualModeHook, fx_visual_mode_hook, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Hook] mode (1: rainbow, 2: pulse, 3: custom color, 4: random, 5: custom)")
+MACRO_CONFIG_INT(ClVisualModeCursor, fx_visual_mode_cursor, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Cursor] mode (1: rainbow, 2: pulse, 3: custom color, 4: random, 5: custom)")
+MACRO_CONFIG_INT(ClVisualModePet, fx_visual_mode_pet, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual[Pet] mode (1: rainbow, 2: pulse, 3: custom color, 4: random, 5: custom)")
 MACRO_CONFIG_INT(ClVisual, fx_visual, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Turn on visual mode Client Side")
 //------------------------
 // FeX Visual Hook
@@ -234,18 +241,23 @@ MACRO_CONFIG_COL(ClVisualCusColor1, fx_visual_cus_col_1, 000, CFGFLAG_CLIENT | C
 MACRO_CONFIG_COL(ClVisualCusColor2, fx_visual_cus_col_2, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual Colors = Hook")
 MACRO_CONFIG_COL(ClVisualCusColor3, fx_visual_cus_col_3, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual Colors = Tee")
 MACRO_CONFIG_COL(ClVisualCusColor4, fx_visual_cus_col_4, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual Colors = Cursor")
+MACRO_CONFIG_COL(ClVisualCusColor5, fx_visual_cus_col_5, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual Colors = Pets")
 //------------------------
 // FeX Visual Freeze bars
 //------------------------
 MACRO_CONFIG_INT(ClVisualFreezeKillBars, fx_visual_freeze_kill_bars, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Turn on visual mode for freezekill bars Client side")
 //------------------------
+// FeX Visual Pets
+//------------------------
+MACRO_CONFIG_INT(ClVisualPets, fx_visual_pets, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Turn on visual mode for pets Client side")
+//------------------------
 // FeX Visual menu variables
 //------------------------
-MACRO_CONFIG_INT(ClVisualMenuMode, fx_visual_cursor_spec, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual Menu mode (1: Weapon, 2: Hook, 3: Tees, 4: Cursor)")
+MACRO_CONFIG_INT(ClVisualMenuMode, fx_visual_menu_mode, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Visual Menu mode (1: Weapon, 2: Hook, 3: Tees, 4: Cursor, 5: Pets)")
 //------------------------
 // FeX Weapon Settings
 //------------------------
-MACRO_CONFIG_INT(ClVisualSync, fx_visual_sync, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sync the colors of the weapons")
+MACRO_CONFIG_INT(ClVisualSync, fx_visual_sync, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Sync the colors of the entries")
 //------------------------
 // FeX More stuff
 //------------------------
@@ -300,7 +312,7 @@ MACRO_CONFIG_INT(ClTeeTrailFade, fx_tee_trail_fade, 0, 0, 1, CFGFLAG_CLIENT | CF
 MACRO_CONFIG_INT(ClTeeTrailColorMode, fx_tee_trail_color_mode, 1, 1, 5, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Tee trail color mode (1: Solid color, 2: Current Tee color, 3: Rainbow, 4: Color based on Tee speed, 5: Random)")
 
 // Status Bar
-MACRO_CONFIG_INT(ClStatusBar, tc_statusbar, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable status bar")
+MACRO_CONFIG_INT(ClStatusBar, fx_statusbar, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Enable status bar")
 
 MACRO_CONFIG_INT(ClStatusBar12HourClock, fx_statusbar_12_hour_clock, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use 12 hour clock in local time")
 MACRO_CONFIG_INT(ClStatusBarLocalTimeSeocnds, fx_statusbar_local_time_seconds, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show seconds in local time")
@@ -320,7 +332,7 @@ MACRO_CONFIG_INT(ClAmIFrozen, EEEfrz, 0, 0, 1, CFGFLAG_CLIENT, "")
 
 
 // FeX Menus:
-MACRO_CONFIG_INT(ClMenuTab, fx_menu_tab, 1, 1, 6, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Save and load the current menu tab")
+MACRO_CONFIG_INT(ClMenuTab, fx_menu_tab, 1, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Save and load the current menu tab")
 
 // Nameplates
 MACRO_CONFIG_INT(ClStrongWeakColorId, fx_strong_weak_color_id, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Render ClientIds in Nameplate Same Color as Strong/Weak Hook Color")
@@ -356,7 +368,7 @@ MACRO_CONFIG_COL(ClStartMenuTextColor, fx_start_menu_text_color, 0, CFGFLAG_CLIE
 MACRO_CONFIG_INT(ClCustomLoadingScreen, fx_custom_loading, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show custom loading screen");
 
 // FeX Update Logs
-MACRO_CONFIG_INT(ClLastViewedUpdateLog, fx_last_viewed_updatelog, 0, 0, 1000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Version number of last viewed update log")
+MACRO_CONFIG_INT(ClLastViewedUpdateLog, fx_last_viewed_updatelog, 0, 0, 10000000000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Version number of last viewed update log") // disabled
 
 // Discord Integration with Warlist
 MACRO_CONFIG_INT(ClDiscordWebhooks, fx_discord_webhook, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Toggle Discord Webhooks for Warlist")
@@ -365,13 +377,41 @@ MACRO_CONFIG_STR(ClDiscordWebhookUrls, fx_discord_webhook_urls, 2560, "", CFGFLA
 MACRO_CONFIG_STR(ClDiscordWebhookNames, fx_discord_webhook_names, 2560, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Discord webhook Names (semicolon separated)")
 MACRO_CONFIG_STR(ClDiscordWebhookScheme, fx_discord_webhook_scheme, 128, "w:1;t:1;h:1", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Webhook routing scheme (w=war,t=team,h=helper;numbers=webhook index)")
 
-MACRO_CONFIG_INT(ClShowPets, fx_show_pets, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show pets")
-MACRO_CONFIG_INT(ClPetSpeed, fx_pet_speed, 10, 1, 50, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet movement speed")
-MACRO_CONFIG_INT(ClPetFollowMode, fx_pet_follow_mode, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet follow mode (1=Player, 2=Dummy, 3=Both, 4=Custom)")
-MACRO_CONFIG_INT(ClPetSkinMode, fx_pet_skin_mode, 1, 1, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet skin mode (1=Player, 2=Dummy, 3=Default, 4=Custom)")
-MACRO_CONFIG_INT(ClPetTransitionMode, fx_pet_transition_mode, 1, 1, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet movement transition (1=Linear, 2=EaseIn, 3=EaseOut)")
-MACRO_CONFIG_COL(ClPetColor, fx_pet_color, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet color")
-MACRO_CONFIG_INT(ClPetTransparency, fx_pet_transparency, 100, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet transparency")
-MACRO_CONFIG_INT(ClPetScale, fx_pet_scale, 100, 50, 200, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet scale")
-MACRO_CONFIG_INT(ClPetDebugLine, fx_pet_debug_line, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show debug line to pet target")
+// Translate
+MACRO_CONFIG_INT(ClAutoTranslate, fx_auto_translate, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Auto translate chat messages")
+MACRO_CONFIG_STR(ClAutoTranslateLang, fx_auto_translate_lang, 4, "en", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Language to translate messages to")
+
+// Server Browser
+// TODO: implement this because i am lazy
+// MACRO_CONFIG_INT(BrFilterHelper, br_filter_helper, 0, 0, 1, CFGFLAG_CLIENT, "Show helper entries in wars list")
+// MACRO_CONFIG_INT(BrFilterWar, br_filter_war, 0, 0, 1, CFGFLAG_CLIENT, "Show war entries in wars list")
+// MACRO_CONFIG_INT(BrFilterTeam, br_filter_team, 0, 0, 1, CFGFLAG_CLIENT, "Show team entries in wars list")
+
+// Animations
+MACRO_CONFIG_INT(ClAnimateEmote, fx_animate_emote, 0, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mode of animation for the emote wheel")
+MACRO_CONFIG_INT(ClAnimateEmoteTime, fx_animate_emote_time, 0, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Duration of emote animation")
+MACRO_CONFIG_INT(ClAnimateBindWheel, fx_animate_bindwheel, 0, 0, 4, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Mode of animation for the bind wheel")
+MACRO_CONFIG_INT(ClAnimateBindWheelTime, fx_animate_bindwheel_time, 0, 0, 2000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Duration of bindwheel animation")
+
+// Pets
+MACRO_CONFIG_INT(ClShowPet, fx_show_pet, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show a pet")
+MACRO_CONFIG_STR(ClSkinPet, fx_skin_pet, 24, "default", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "Pet skin")
+MACRO_CONFIG_INT(ClSizePet, fx_size_pet, 60, 10, 500, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Size of the pet as a percentage of a normal player")
+MACRO_CONFIG_INT(ClAlphaPet, fx_alpha_pet, 90, 10, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Alpha of pet (100 = fully opaque, 50 = half transparent)")
+MACRO_CONFIG_STR(ClCustomPetSkin, fx_custom_pet_skin, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "Path to custom pet skin name located in fex/pets")
+MACRO_CONFIG_INT(ClUseCustomPetSkin, fx_use_custom_pet_skin, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Use custom pet skin located in fex/pets config directory")
+
+MACRO_CONFIG_INT(ClPetDebugLineThickness, fx_pet_debug_line_thickness, 1, 1, 10, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet debug line thickness");
+MACRO_CONFIG_INT(ClPetDebugLineAlpha, fx_pet_debug_line_alpha, 30, 0, 100, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet debug line alpha");
+MACRO_CONFIG_INT(ClPetDebugLine, fx_pet_debug_line, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Show debug line from player to pet target")
 MACRO_CONFIG_COL(ClPetDebugLineColor, fx_pet_debug_line_color, 000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet debug line color")
+
+MACRO_CONFIG_INT(ClPetFollowMode, fx_pet_follow_mode, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet follow mode: 0=both, 1=acceleration only, 2=deceleration only, 3=linear");
+
+MACRO_CONFIG_INT(ClPetFollowSpeed, fx_pet_follow_speed, 200, 1, 1000, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet follow base speed");
+
+MACRO_CONFIG_INT(ClPetPosition, fx_pet_position, 0, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Pet position relative to player: 0=top-left, 1=top-right, 2=bottom-right, 3=bottom-left");
+
+// Change name near finish
+MACRO_CONFIG_INT(ClChangeNameNearFinish, fx_change_name_near_finish, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Attempt to change your name when near finish")
+MACRO_CONFIG_STR(ClFinishName,fx_finish_name, 16, "nameless tee", CFGFLAG_CLIENT | CFGFLAG_SAVE | CFGFLAG_INSENSITIVE, "Name to change to when near finish when tc_change_name_near_finish is 1")

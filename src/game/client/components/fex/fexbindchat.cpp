@@ -197,9 +197,6 @@ void CBindchat::OnConsoleInit()
 	AddBindDefault(".delclone", "fexdelclone");
 	AddBindDefault(".volume", "fexvolume");
 
-	// FeX Password system
-	AddBindDefault(".password", "zzZpasswordFeXZzz");
-
 	// shrugs
 	AddBindDefault(".shrug", "say ¯\\_(ツ)_/¯");
 	AddBindDefault(".flip", "say (╯°□°)╯︵ ┻━┻");
@@ -259,12 +256,18 @@ void CBindchat::OnConsoleInit()
 	AddBindDefault(".delclanteam", "remove_war_clan_index 2");
 	AddBindDefault(".unclanteam", "remove_war_clan_index 2");
 
-	AddBindDefault(".t", "translate");
-    AddBindDefault(".tr", "translate");
-    AddBindDefault(".lt", "lasttranslate");
+	AddBindDefault(".translate", "Translate");
+    AddBindDefault(".targettranslate", "TargetTranslate");
+    AddBindDefault(".autotranslate", "AutoTranslate");
+	AddBindDefault(".lasttranslate", "LastTranslate");
+
+	AddBindDefault(".t", "Translate");
+    AddBindDefault(".tt", "TargetTranslate");
+    AddBindDefault(".at", "AutoTranslate");
+	AddBindDefault(".lt", "LastTranslate");
 
 	// Default Binds (!)
-    AddBindDefault("!help", "exec data/fex/binds/help.cfg");
+	AddBindDefault("!help", "exec data/fex/binds/help.cfg");
 	AddBindDefault("!extra", "exec data/fex/binds/extra.cfg");
     // FeX
 
