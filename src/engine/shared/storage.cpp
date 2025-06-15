@@ -87,21 +87,28 @@ public:
 			Success &= CreateFolder("assets/particles", TYPE_SAVE);
 			Success &= CreateFolder("assets/hud", TYPE_SAVE);
 			Success &= CreateFolder("assets/extras", TYPE_SAVE);
-			Success &= CreateFolder("fex", TYPE_SAVE);
-			Success &= CreateFolder("fex/pets", TYPE_SAVE);
 #if defined(CONF_VIDEORECORDER)
-			Success &= CreateFolder("videos", TYPE_SAVE);
+				"videos"
 #endif
+			};
+
+			for(const char *pDir : CLIENT_DIRS)
+				Success &= CreateFolder(pDir, TYPE_SAVE);
 		}
-		Success &= CreateFolder("dumps", TYPE_SAVE);
-		Success &= CreateFolder("demos", TYPE_SAVE);
-		Success &= CreateFolder("demos/auto", TYPE_SAVE);
-		Success &= CreateFolder("demos/auto/race", TYPE_SAVE);
-		Success &= CreateFolder("demos/auto/server", TYPE_SAVE);
-		Success &= CreateFolder("demos/replays", TYPE_SAVE);
-		Success &= CreateFolder("editor", TYPE_SAVE);
-		Success &= CreateFolder("ghosts", TYPE_SAVE);
-		Success &= CreateFolder("teehistorian", TYPE_SAVE);
+
+		static constexpr const char *COMMON_DIRS[] = {
+			"dumps",
+			"demos",
+			"demos/auto",
+			"demos/auto/race",
+			"demos/auto/server",
+			"demos/replays",
+			"editor",
+			"ghosts",
+			"teehistorian"};
+
+		for(const char *pDir : COMMON_DIRS)
+			Success &= CreateFolder(pDir, TYPE_SAVE);
 
 		if(!Success)
 		{
@@ -467,7 +474,7 @@ public:
 		}
 	}
 
-	const char *GetPath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize)
+	const char *GetPath(int Type, const char *pDir, char *pBuffer, unsigned BufferSize) const
 	{
 		if(Type == TYPE_ABSOLUTE)
 		{
@@ -480,7 +487,7 @@ public:
 		return pBuffer;
 	}
 
-	void TranslateType(int &Type, const char *pPath)
+	void TranslateType(int &Type, const char *pPath) const
 	{
 		if(Type == TYPE_SAVE_OR_ABSOLUTE)
 			Type = fs_is_relative_path(pPath) ? TYPE_SAVE : TYPE_ABSOLUTE;
@@ -509,7 +516,7 @@ public:
 
 		if(str_startswith(pFilename, "mapres/../skins/"))
 		{
-			pFilename = pFilename + 10; // just start from skins/
+			pFilename = pFilename + str_length("mapres/../");
 		}
 		if(pFilename[0] == '/' || pFilename[0] == '\\' || str_find(pFilename, "../") != nullptr || str_find(pFilename, "..\\") != nullptr
 #ifdef CONF_FAMILY_WINDOWS
@@ -546,7 +553,7 @@ public:
 	}
 
 	template<typename F>
-	bool GenericExists(const char *pFilename, int Type, F &&CheckFunction)
+	bool GenericExists(const char *pFilename, int Type, F &&CheckFunction) const
 	{
 		TranslateType(Type, pFilename);
 
@@ -794,12 +801,7 @@ public:
 		char aBuffer[IO_MAX_PATH_LENGTH];
 		GetPath(Type, pFilename, aBuffer, sizeof(aBuffer));
 
-		bool Success = !fs_remove(aBuffer);
-		if(!Success)
-		{
-			log_error("storage", "failed to remove file: %s", aBuffer);
-		}
-		return Success;
+		return fs_remove(aBuffer) == 0;
 	}
 
 	bool RemoveFolder(const char *pFilename, int Type) override
@@ -809,12 +811,7 @@ public:
 		char aBuffer[IO_MAX_PATH_LENGTH];
 		GetPath(Type, pFilename, aBuffer, sizeof(aBuffer));
 
-		bool Success = !fs_removedir(aBuffer);
-		if(!Success)
-		{
-			log_error("storage", "failed to remove folder: %s", aBuffer);
-		}
-		return Success;
+		return fs_removedir(aBuffer) == 0;
 	}
 
 	bool RemoveBinaryFile(const char *pFilename) override
@@ -822,12 +819,7 @@ public:
 		char aBuffer[IO_MAX_PATH_LENGTH];
 		GetBinaryPath(pFilename, aBuffer, sizeof(aBuffer));
 
-		bool Success = !fs_remove(aBuffer);
-		if(!Success)
-		{
-			log_error("storage", "failed to remove binary file: %s", aBuffer);
-		}
-		return Success;
+		return fs_remove(aBuffer) == 0;
 	}
 
 	bool RenameFile(const char *pOldFilename, const char *pNewFilename, int Type) override
@@ -839,12 +831,7 @@ public:
 		GetPath(Type, pOldFilename, aOldBuffer, sizeof(aOldBuffer));
 		GetPath(Type, pNewFilename, aNewBuffer, sizeof(aNewBuffer));
 
-		bool Success = !fs_rename(aOldBuffer, aNewBuffer);
-		if(!Success)
-		{
-			log_error("storage", "failed to rename file: %s -> %s", aOldBuffer, aNewBuffer);
-		}
-		return Success;
+		return fs_rename(aOldBuffer, aNewBuffer) == 0;
 	}
 
 	bool RenameBinaryFile(const char *pOldFilename, const char *pNewFilename) override
@@ -860,12 +847,7 @@ public:
 			return false;
 		}
 
-		bool Success = !fs_rename(aOldBuffer, aNewBuffer);
-		if(!Success)
-		{
-			log_error("storage", "failed to rename binary file: %s -> %s", aOldBuffer, aNewBuffer);
-		}
-		return Success;
+		return fs_rename(aOldBuffer, aNewBuffer) == 0;
 	}
 
 	bool CreateFolder(const char *pFoldername, int Type) override
@@ -877,7 +859,9 @@ public:
 
 		bool Success = !fs_makedir(aBuffer);
 		if(!Success)
-			dbg_msg("storage", "failed to create folder: %s", aBuffer);
+		{
+			log_error("storage", "failed to create folder: %s", aBuffer);
+		}
 		return Success;
 	}
 
@@ -897,7 +881,7 @@ public:
 	const char *GetBinaryPathAbsolute(const char *pFilename, char *pBuffer, unsigned BufferSize) override
 	{
 		char aBinaryPath[IO_MAX_PATH_LENGTH];
-		GetBinaryPath(PLAT_CLIENT_EXEC, aBinaryPath, sizeof(aBinaryPath));
+		GetBinaryPath(pFilename, aBinaryPath, sizeof(aBinaryPath));
 		if(fs_is_relative_path(aBinaryPath))
 		{
 			if(fs_getcwd(pBuffer, BufferSize))
